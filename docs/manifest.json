@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "generated_at": "2026-06-17T00:00:00Z",
+  "flies": [
+    {
+      "id": "tide-clock-7f3a",
+      "title": "Tide Clock",
+      "tags": ["time", "ambient", "visual"],
+      "category": "tools",
+      "path": "flies/tide-clock-7f3a/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "breath-pacer-9c12",
+      "title": "Breath Pacer",
+      "tags": ["mindful", "ambient", "time"],
+      "category": "mindful",
+      "path": "flies/breath-pacer-9c12/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "starfield-2ba8",
+      "title": "Starfield",
+      "tags": ["visual", "ambient", "generative"],
+      "category": "visuals",
+      "path": "flies/starfield-2ba8/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "mood-ring-4d51",
+      "title": "Mood Ring",
+      "tags": ["ambient", "visual", "color"],
+      "category": "visuals",
+      "path": "flies/mood-ring-4d51/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "coin-flip-e201",
+      "title": "Coin Flip",
+      "tags": ["tool", "quick", "decide"],
+      "category": "tools",
+      "path": "flies/coin-flip-e201/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "tally-counter-b8f4",
+      "title": "Tally Counter",
+      "tags": ["tool", "quick", "useful"],
+      "category": "tools",
+      "path": "flies/tally-counter-b8f4/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "roll-die-3a17",
+      "title": "Roll Die",
+      "tags": ["tool", "quick", "game"],
+      "category": "tools",
+      "path": "flies/roll-die-3a17/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "reaction-timer-6e93",
+      "title": "Reaction",
+      "tags": ["game", "reflex", "quick"],
+      "category": "games",
+      "path": "flies/reaction-timer-6e93/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "pixel-doodle-c4a2",
+      "title": "Pixel Doodle",
+      "tags": ["creative", "visual", "playful"],
+      "category": "creative",
+      "path": "flies/pixel-doodle-c4a2/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "color-sample-d50f",
+      "title": "Color Sample",
+      "tags": ["creative", "visual", "color"],
+      "category": "creative",
+      "path": "flies/color-sample-d50f/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "word-daisy-a7c3",
+      "title": "Word Daisy",
+      "tags": ["text", "playful", "word"],
+      "category": "word",
+      "path": "flies/word-daisy-a7c3/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "tip-calc-f819",
+      "title": "Tip Split",
+      "tags": ["tool", "useful", "calc"],
+      "category": "tools",
+      "path": "flies/tip-calc-f819/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
+      "id": "pebbles-91be",
+      "title": "Pebbles",
+      "tags": ["ambient", "mindful", "visual"],
+      "category": "mindful",
+      "path": "flies/pebbles-91be/index.html",
+      "source": "template",
+      "created": "2026-06-17",
+      "prior": 1.0,
+      "aspect": "portrait"
+    }
+  ]
+}

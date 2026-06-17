@@ -1,0 +1,39 @@
+{
+  "ideas": [
+    {
+      "title": "breath pacer",
+      "description": "4-7-8 breath circle: expand on inhale, hold, contract on exhale. clear phase labels.",
+      "tags": ["mindful", "ambient", "time"]
+    },
+    {
+      "title": "5-4-3-2-1 grounding",
+      "description": "the 5-4-3-2-1 senses grounding exercise — five things you see, four hear, etc. one prompt per step, tap to advance.",
+      "tags": ["mindful", "guided", "calm"]
+    },
+    {
+      "title": "box breathing",
+      "description": "4-4-4-4 box breathing, animated as a square outline that fills each side.",
+      "tags": ["mindful", "ambient", "time"]
+    },
+    {
+      "title": "intention card",
+      "description": "tap to draw one of ~30 short intentions for the next hour. typeset on a soft card.",
+      "tags": ["mindful", "playful", "text"]
+    },
+    {
+      "title": "still pond",
+      "description": "click a still water surface to drop ripples; ambient, no goal. soft palette.",
+      "tags": ["mindful", "ambient", "visual"]
+    },
+    {
+      "title": "gratitude bead",
+      "description": "tap a bead to drop one — fills a quiet column. silent counter of how many today.",
+      "tags": ["mindful", "playful", "useful"]
+    },
+    {
+      "title": "tea timer",
+      "description": "pick a tea (3 types), countdown with a gentle filling teacup visual. visual ding at zero.",
+      "tags": ["mindful", "time", "useful"]
+    }
+  ]
+}

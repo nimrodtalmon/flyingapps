@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="fly:tags" content="text,playful,word">
+<title>Word Daisy</title>
+<style>
+  html,body{margin:0;height:100%;background:radial-gradient(120% 80% at 50% 35%,#FFFDF7 0%,#FAF6EC 60%,#F2EAD3 100%);font-family:-apple-system,system-ui,sans-serif;color:#2A2316;overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none}
+  .wrap{position:fixed;inset:0;display:grid;place-items:center;padding:24px}
+  .daisy{position:relative;width:84vmin;height:84vmin;max-width:340px;max-height:340px}
+  .petal{position:absolute;top:50%;left:50%;transform-origin:0 0;display:grid;place-items:center;width:30vmin;height:18vmin;max-width:130px;max-height:78px;border-radius:50%;background:radial-gradient(circle at 30% 35%,#FFFFFF,#FFF5D9 80%);color:#2A2316;font-size:14px;letter-spacing:.18em;text-transform:lowercase;box-shadow:0 8px 22px rgba(180,140,40,.12),inset 0 0 0 1px rgba(180,140,40,.08);cursor:pointer;transition:transform 320ms cubic-bezier(.16,1,.3,1)}
+  .petal:active{transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--rot)) scale(.95)}
+  .center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:24vmin;height:24vmin;max-width:110px;max-height:110px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#FFC34A,#E0902B 80%);display:grid;place-items:center;color:#2A2316;font-size:18px;letter-spacing:.14em;text-transform:lowercase;font-weight:300;box-shadow:0 10px 24px rgba(180,140,40,.22);z-index:2}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="daisy" class="daisy">
+    <div id="center" class="center">drift</div>
+  </div>
+</div>
+<script>
+(function(){if(window.Fly)return;function s(t,p){try{parent.postMessage({source:"fly",type:t,payload:p||null},"*")}catch(e){}}window.Fly={ready:()=>s("fly:ready"),interaction:k=>s("fly:interaction",{kind:k||null}),complete:()=>s("fly:complete"),catch:()=>s("fly:catch")};window.addEventListener("message",e=>{const d=e.data;if(!d||typeof d!=="object")return;if(d.type==="fly:active")window.dispatchEvent(new CustomEvent("fly:active"));if(d.type==="fly:pause")window.dispatchEvent(new CustomEvent("fly:pause"))});function r(){Fly.ready()}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",r,{once:true});else r();})();
+</script>
+<script>
+  const WORDS = {
+    drift:    ["float","slow","cloud","sail","wander"],
+    float:    ["lift","sky","buoy","cloud","glide"],
+    slow:     ["soft","hush","quiet","drift","slow"],
+    cloud:    ["sky","drift","rain","mist","white"],
+    sail:     ["wind","sea","mast","glide","drift"],
+    wander:   ["roam","path","drift","slow","quiet"],
+    lift:     ["rise","wing","sky","float","up"],
+    sky:      ["blue","cloud","wide","still","far"],
+    buoy:     ["bob","sea","red","float","mark"],
+    glide:    ["smooth","wing","slip","drift","float"],
+    rise:     ["lift","sun","dawn","up","tall"],
+    wing:     ["bird","glide","feather","lift","beat"],
+    bird:     ["wing","song","sky","feather","nest"],
+    feather:  ["soft","light","quill","wing","down"],
+    song:     ["bird","line","quiet","note","tune"],
+    quiet:    ["hush","still","slow","calm","alone"],
+    hush:     ["quiet","soft","slow","mute","calm"],
+    still:    ["quiet","calm","slow","silent","held"],
+    soft:     ["hush","cloud","down","wool","slow"],
+    calm:     ["still","quiet","slow","soft","sea"],
+    sea:      ["wave","salt","blue","tide","far"],
+    wave:     ["sea","crest","roll","tide","break"],
+    salt:     ["sea","sand","trace","kiss","grit"],
+    blue:     ["sky","sea","deep","ink","dawn"],
+    tide:     ["sea","moon","draw","slow","turn"],
+    far:      ["sky","sea","road","north","line"],
+    dawn:     ["light","rise","blue","quiet","wake"],
+    light:    ["dawn","soft","glow","clean","still"],
+    glow:     ["light","ember","warm","soft","low"],
+    ember:    ["glow","warm","ash","low","red"],
+  };
+  const ring = document.getElementById("daisy");
+  const centerEl = document.getElementById("center");
+  let cur = "drift";
+
+  function render(word){
+    cur = word;
+    centerEl.textContent = word;
+    // remove old petals
+    [...ring.querySelectorAll(".petal")].forEach(p => p.remove());
+    const opts = WORDS[word] || ["drift","float","slow","quiet","sky"];
+    const R = Math.min(window.innerWidth, window.innerHeight) * 0.30;
+    opts.forEach((w, i) => {
+      const angle = (-Math.PI/2) + (i / opts.length) * Math.PI*2;
+      const x = Math.cos(angle) * R, y = Math.sin(angle) * R;
+      const p = document.createElement("div");
+      p.className = "petal";
+      p.textContent = w;
+      p.style.setProperty("--x", `${x}px`);
+      p.style.setProperty("--y", `${y}px`);
+      p.style.setProperty("--rot", `0deg`);
+      p.style.transform = `translate(-50%,-50%) translate(${x}px, ${y}px)`;
+      p.addEventListener("click", () => {
+        if (!WORDS[w]) WORDS[w] = ["drift","float","slow","quiet","sky"];
+        render(w);
+        Fly.interaction("petal");
+      });
+      ring.appendChild(p);
+    });
+  }
+  render(cur);
+  window.addEventListener("resize", () => render(cur));
+</script>
+</body>
+</html>

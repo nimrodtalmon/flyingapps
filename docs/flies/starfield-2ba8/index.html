@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="fly:tags" content="visual,ambient,generative">
+<title>Starfield</title>
+<style>
+  html,body{margin:0;height:100%;background:radial-gradient(120% 80% at 50% 30%,#1E2A3A 0%,#0F1825 60%,#070C16 100%);overflow:hidden;-webkit-tap-highlight-color:transparent;font-family:-apple-system,system-ui,sans-serif}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+  .hint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.4);font-size:12px;letter-spacing:.18em;text-transform:lowercase}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hint">tap to seed a star</div>
+<script>
+(function(){if(window.Fly)return;function s(t,p){try{parent.postMessage({source:"fly",type:t,payload:p||null},"*")}catch(e){}}window.Fly={ready:()=>s("fly:ready"),interaction:k=>s("fly:interaction",{kind:k||null}),complete:()=>s("fly:complete"),catch:()=>s("fly:catch")};window.addEventListener("message",e=>{const d=e.data;if(!d||typeof d!=="object")return;if(d.type==="fly:active")window.dispatchEvent(new CustomEvent("fly:active"));if(d.type==="fly:pause")window.dispatchEvent(new CustomEvent("fly:pause"))});function r(){Fly.ready()}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",r,{once:true});else r();})();
+</script>
+<script>
+  const c = document.getElementById("c");
+  const ctx = c.getContext("2d");
+  let W=0,H=0,dpr=Math.min(window.devicePixelRatio||1, 2);
+  function resize(){
+    W = c.clientWidth; H = c.clientHeight;
+    c.width = W*dpr; c.height = H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener("resize", resize); resize();
+
+  const stars = [];
+  function seedStar(x,y,bright){
+    stars.push({
+      x: x ?? Math.random()*W,
+      y: y ?? Math.random()*H,
+      r: 0.4 + Math.random()*1.6,
+      v: 0.05 + Math.random()*0.22,
+      a: bright ? 1 : 0.4 + Math.random()*0.5,
+      t: Math.random()*Math.PI*2,
+      tv: 0.02 + Math.random()*0.04,
+    });
+  }
+  for (let i=0;i<120;i++) seedStar();
+
+  let running = true, raf = 0;
+  function frame(){
+    if (!running) return;
+    ctx.fillStyle = "rgba(7,12,22,0.18)";
+    ctx.fillRect(0,0,W,H);
+    for (const s of stars){
+      s.y += s.v;
+      if (s.y > H+4) { s.y = -4; s.x = Math.random()*W; }
+      s.t += s.tv;
+      const tw = 0.6 + 0.4*Math.sin(s.t);
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(255,255,255,${s.a * tw})`;
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  frame();
+
+  c.addEventListener("pointerdown", (e) => {
+    const rect = c.getBoundingClientRect();
+    const x = e.clientX - rect.left, y = e.clientY - rect.top;
+    for (let i=0;i<4;i++) seedStar(x + (Math.random()-.5)*16, y + (Math.random()-.5)*16, true);
+    Fly.interaction("seed");
+  });
+
+  window.addEventListener("fly:pause", () => { running = false; cancelAnimationFrame(raf); });
+  window.addEventListener("fly:active", () => { if (!running) { running = true; frame(); } });
+</script>
+</body>
+</html>

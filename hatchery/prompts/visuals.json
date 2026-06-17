@@ -1,0 +1,44 @@
+{
+  "ideas": [
+    {
+      "title": "drifting starfield",
+      "description": "soft particles drift downward; tap to seed more. dark calm bg.",
+      "tags": ["visual", "ambient", "generative"]
+    },
+    {
+      "title": "lissajous",
+      "description": "lissajous curve with sliders for a/b/phase. traced with a glowing dot.",
+      "tags": ["visual", "math", "generative"]
+    },
+    {
+      "title": "pendulum waves",
+      "description": "15 pendulums of slightly different periods phase in and out of sync. play/pause.",
+      "tags": ["visual", "math", "generative"]
+    },
+    {
+      "title": "flow field",
+      "description": "perlin-like flow field with a few drifting agents leaving trails. tap to reset seed.",
+      "tags": ["visual", "ambient", "generative"]
+    },
+    {
+      "title": "calm rain",
+      "description": "light rain over a soft gradient; drops produce tiny splashes. tap to add a drop.",
+      "tags": ["visual", "ambient", "generative"]
+    },
+    {
+      "title": "moiré tiles",
+      "description": "two overlapping line patterns; one rotates slowly producing moiré. slider for spacing.",
+      "tags": ["visual", "generative", "ambient"]
+    },
+    {
+      "title": "kaleidoscope tile",
+      "description": "8-fold mirrored canvas; drag to draw, see the symmetric result.",
+      "tags": ["visual", "playful", "creative"]
+    },
+    {
+      "title": "dot grid",
+      "description": "grid of dots that gently pulse, each phase offset by position. ambient, no controls beyond pause.",
+      "tags": ["visual", "ambient", "generative"]
+    }
+  ]
+}

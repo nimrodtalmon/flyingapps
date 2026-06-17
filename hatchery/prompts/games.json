@@ -1,0 +1,39 @@
+{
+  "ideas": [
+    {
+      "title": "reaction timer",
+      "description": "wait for green, tap. shows your time in ms. records best.",
+      "tags": ["game", "reflex", "quick"]
+    },
+    {
+      "title": "memory dots",
+      "description": "show a 4-dot sequence on a 3x3 grid, fade, then user reproduces it. levels up by 1 each round.",
+      "tags": ["game", "memory", "quick"]
+    },
+    {
+      "title": "color match",
+      "description": "show a target color; tap one of 4 swatches that matches. progressively harder.",
+      "tags": ["game", "color", "quick"]
+    },
+    {
+      "title": "tap-the-odd",
+      "description": "grid of 9 tiles, one is a slightly different shade. tap it. level up by reducing the contrast.",
+      "tags": ["game", "visual", "quick"]
+    },
+    {
+      "title": "swap-2",
+      "description": "small puzzle: 4 colored tiles; swap two at a time to reach the goal order. 4-move max.",
+      "tags": ["game", "puzzle", "quick"]
+    },
+    {
+      "title": "estimate",
+      "description": "show a dotted scatter for 0.4 s, then ask user to estimate count. score by closeness.",
+      "tags": ["game", "perception", "quick"]
+    },
+    {
+      "title": "rhythm tap",
+      "description": "metronome ticks at 90 bpm; the user must tap on the beat for 8 bars. score is closeness.",
+      "tags": ["game", "rhythm", "quick"]
+    }
+  ]
+}

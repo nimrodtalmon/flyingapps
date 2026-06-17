@@ -1,0 +1,59 @@
+{
+  "ideas": [
+    {
+      "title": "tip splitter",
+      "description": "bill amount, tip %, number of people. show per-person clearly.",
+      "tags": ["tool", "calc", "useful"]
+    },
+    {
+      "title": "metronome",
+      "description": "tap-tempo metronome with a soft visual pulse. BPM display. start/stop toggle.",
+      "tags": ["tool", "time", "rhythm"]
+    },
+    {
+      "title": "stopwatch",
+      "description": "elegant stopwatch with lap times. minimal chrome.",
+      "tags": ["tool", "time", "useful"]
+    },
+    {
+      "title": "countdown",
+      "description": "countdown timer; tap the number to set; pause/reset. soft chime at zero (visual flash only).",
+      "tags": ["tool", "time", "useful"]
+    },
+    {
+      "title": "unit converter",
+      "description": "small unit converter — one category (length OR temperature OR weight). dial-style picker.",
+      "tags": ["tool", "calc", "useful"]
+    },
+    {
+      "title": "decision wheel",
+      "description": "type 2-6 options, spin a wheel to pick one. soft easing.",
+      "tags": ["tool", "decide", "quick"]
+    },
+    {
+      "title": "world clock",
+      "description": "three timezones at once, picked from a short curated list. soft circle around the active one.",
+      "tags": ["tool", "time", "ambient"]
+    },
+    {
+      "title": "rpn calculator",
+      "description": "a tiny RPN calculator. stack visible. four functions plus enter.",
+      "tags": ["tool", "calc", "playful"]
+    },
+    {
+      "title": "qr-like grid",
+      "description": "type a short string, render a deterministic pixel-grid signature for it. not a real QR, just a visual hash.",
+      "tags": ["tool", "visual", "playful"]
+    },
+    {
+      "title": "color hex picker",
+      "description": "three sliders (H, S, L) producing a swatch and hex code. tap hex to copy (visual feedback only).",
+      "tags": ["tool", "color", "useful"]
+    },
+    {
+      "title": "password phrase",
+      "description": "generate a 4-word memorable passphrase from a small word list. tap to regenerate.",
+      "tags": ["tool", "useful", "playful"]
+    }
+  ]
+}

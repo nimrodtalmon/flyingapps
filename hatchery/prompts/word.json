@@ -1,0 +1,39 @@
+{
+  "ideas": [
+    {
+      "title": "word daisy",
+      "description": "center word + 5 petals of associated words. tap a petal to make it the center. ~30 hardcoded groupings.",
+      "tags": ["word", "playful", "text"]
+    },
+    {
+      "title": "anagram",
+      "description": "show a 5-letter scrambled word; tap letters to unscramble. on success, next word.",
+      "tags": ["word", "puzzle", "quick"]
+    },
+    {
+      "title": "rhyme finder",
+      "description": "tap one of ~20 seed words; show 3 rhymes (curated). cycle.",
+      "tags": ["word", "playful", "text"]
+    },
+    {
+      "title": "syllable splitter",
+      "description": "type a short word; the page splits it into syllables visually. uses a small hardcoded dictionary.",
+      "tags": ["word", "text", "playful"]
+    },
+    {
+      "title": "fortune line",
+      "description": "tap to draw one of ~40 short, calm fortune-cookie style lines. nothing alarming or salesy.",
+      "tags": ["word", "playful", "text"]
+    },
+    {
+      "title": "etymology card",
+      "description": "show a single english word + a short, charming etymology line (from ~25 hand-picked). tap for next.",
+      "tags": ["word", "text", "playful"]
+    },
+    {
+      "title": "morse light",
+      "description": "type a short string; render it in soft morse-code dot/dash light pulses across the screen.",
+      "tags": ["word", "visual", "playful"]
+    }
+  ]
+}

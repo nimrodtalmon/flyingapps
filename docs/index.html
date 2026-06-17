@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#EAF1F6">
+  <title>Flying Apps</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="feed" class="feed" aria-label="The swarm"></main>
+
+  <button id="jar-button" class="jar-button" aria-label="Your jar" hidden>
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path d="M7 3h10v2H7zM6 6h12v3a4 4 0 0 1-1 2.6V20a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-8.4A4 4 0 0 1 6 9z"
+            fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+    </svg>
+    <span class="jar-count" id="jar-count" hidden></span>
+  </button>
+
+  <div id="hint" class="hint" hidden>
+    <span class="hint-arrow" aria-hidden="true">↑</span>
+    <span class="hint-text">swipe up — let the next one in</span>
+  </div>
+
+  <div id="jar" class="jar" hidden role="dialog" aria-label="Your jar">
+    <header class="jar-header">
+      <h1>your jar</h1>
+      <button class="jar-close" id="jar-close" aria-label="Close jar">close</button>
+    </header>
+    <div id="jar-grid" class="jar-grid"></div>
+    <p id="jar-empty" class="jar-empty" hidden>Empty jar. Catch a Fly you like.</p>
+  </div>
+
+  <script type="module" src="app/feed.js"></script>
+</body>
+</html>

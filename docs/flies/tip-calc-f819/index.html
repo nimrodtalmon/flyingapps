@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="fly:tags" content="tool,useful,calc">
+<title>Tip Split</title>
+<style>
+  html,body{margin:0;height:100%;background:linear-gradient(180deg,#EAF1F6,#F7FAFC);font-family:-apple-system,system-ui,sans-serif;color:#1A2330;overflow:hidden;-webkit-tap-highlight-color:transparent}
+  .wrap{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:28px}
+  .card{width:100%;max-width:320px;background:#fff;border-radius:18px;padding:22px;box-shadow:0 8px 24px rgba(46,80,110,.08);display:flex;flex-direction:column;gap:18px}
+  .row{display:flex;flex-direction:column;gap:4px}
+  .lbl{font-size:11px;letter-spacing:.22em;text-transform:lowercase;color:#8B97A6}
+  .ctl{display:flex;align-items:center;gap:10px}
+  input[type=number]{font:inherit;font-size:24px;font-weight:300;width:100%;border:0;border-bottom:1px solid rgba(26,35,48,.08);background:transparent;color:#1A2330;padding:4px 0;outline:none;-moz-appearance:textfield}
+  input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]:focus{border-bottom-color:#2BB6A3}
+  .tip-pct{display:flex;gap:6px;flex-wrap:wrap}
+  .pct{font:inherit;font-size:12px;letter-spacing:.12em;text-transform:lowercase;padding:6px 12px;border-radius:999px;background:#F2F5F8;color:#8B97A6;border:1px solid transparent;cursor:pointer}
+  .pct.sel{background:rgba(43,182,163,.12);color:#2BB6A3;border-color:rgba(43,182,163,.35)}
+  .out{display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid rgba(26,35,48,.06)}
+  .per{font-size:42px;font-weight:200;color:#2BB6A3;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .detail{font-size:12px;letter-spacing:.18em;text-transform:lowercase;color:#8B97A6;font-variant-numeric:tabular-nums}
+  .stepper{display:flex;align-items:center;gap:6px}
+  .step{width:32px;height:32px;border-radius:8px;background:#F2F5F8;border:0;color:#1A2330;font-size:16px;cursor:pointer}
+  .step:hover{background:#E5EEF3}
+  .ppl{font-size:24px;font-weight:300;min-width:30px;text-align:center;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+  <div class="row">
+    <div class="lbl">bill</div>
+    <div class="ctl"><input id="bill" type="number" inputmode="decimal" value="48" min="0" step="0.01"></div>
+  </div>
+  <div class="row">
+    <div class="lbl">tip</div>
+    <div class="tip-pct" id="pct">
+      <button class="pct" data-v="10">10%</button>
+      <button class="pct sel" data-v="15">15%</button>
+      <button class="pct" data-v="18">18%</button>
+      <button class="pct" data-v="20">20%</button>
+      <button class="pct" data-v="25">25%</button>
+    </div>
+  </div>
+  <div class="row">
+    <div class="lbl">split</div>
+    <div class="ctl stepper">
+      <button class="step" id="dec" type="button">−</button>
+      <div class="ppl" id="ppl">2</div>
+      <button class="step" id="inc" type="button">+</button>
+    </div>
+  </div>
+  <div class="out">
+    <div class="per" id="per">$0.00</div>
+    <div class="detail" id="detail">per person</div>
+  </div>
+</div></div>
+<script>
+(function(){if(window.Fly)return;function s(t,p){try{parent.postMessage({source:"fly",type:t,payload:p||null},"*")}catch(e){}}window.Fly={ready:()=>s("fly:ready"),interaction:k=>s("fly:interaction",{kind:k||null}),complete:()=>s("fly:complete"),catch:()=>s("fly:catch")};window.addEventListener("message",e=>{const d=e.data;if(!d||typeof d!=="object")return;if(d.type==="fly:active")window.dispatchEvent(new CustomEvent("fly:active"));if(d.type==="fly:pause")window.dispatchEvent(new CustomEvent("fly:pause"))});function r(){Fly.ready()}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",r,{once:true});else r();})();
+</script>
+<script>
+  let bill = 48, pct = 15, ppl = 2;
+  const billEl = document.getElementById("bill");
+  const pctRow = document.getElementById("pct");
+  const pplEl = document.getElementById("ppl");
+  function recompute(){
+    const total = bill * (1 + pct/100);
+    const per = total / Math.max(ppl,1);
+    document.getElementById("per").textContent = "$" + per.toFixed(2);
+    document.getElementById("detail").textContent = `tip $${(bill*pct/100).toFixed(2)} · total $${total.toFixed(2)}`;
+  }
+  billEl.addEventListener("input", () => {
+    bill = parseFloat(billEl.value) || 0; recompute(); Fly.interaction("bill");
+  });
+  pctRow.addEventListener("click", (e) => {
+    const t = e.target.closest(".pct"); if (!t) return;
+    [...pctRow.children].forEach(c => c.classList.remove("sel"));
+    t.classList.add("sel");
+    pct = parseInt(t.dataset.v); recompute(); Fly.interaction("pct");
+  });
+  document.getElementById("inc").addEventListener("click", () => { ppl++; pplEl.textContent = ppl; recompute(); Fly.interaction("ppl"); });
+  document.getElementById("dec").addEventListener("click", () => { if (ppl>1){ ppl--; pplEl.textContent = ppl; recompute(); Fly.interaction("ppl"); }});
+  recompute();
+</script>
+</body>
+</html>

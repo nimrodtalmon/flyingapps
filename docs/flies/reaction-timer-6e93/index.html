@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="fly:tags" content="game,reflex,quick">
+<title>Reaction</title>
+<style>
+  html,body{margin:0;height:100%;font-family:-apple-system,system-ui,sans-serif;color:#1A2330;overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none;transition:background 400ms ease}
+  body.idle{background:linear-gradient(180deg,#EAF1F6,#F7FAFC)}
+  body.wait{background:linear-gradient(180deg,#FFE5DC,#FFC8B8)}
+  body.go{background:linear-gradient(180deg,#D6F2EC,#9CD5CC)}
+  body.early{background:linear-gradient(180deg,#FFD9D9,#F3B1B1)}
+  .wrap{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;cursor:pointer}
+  .big{font-size:11vmin;font-weight:200;letter-spacing:-.02em;color:#1A2330}
+  .label{font-size:13px;letter-spacing:.22em;text-transform:lowercase;color:#1A2330;opacity:.7}
+  .meta{font-size:12px;letter-spacing:.18em;text-transform:lowercase;color:#1A2330;opacity:.5;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body class="idle">
+<div class="wrap" id="wrap">
+  <div id="label" class="label">tap to begin</div>
+  <div id="big" class="big">·</div>
+  <div id="meta" class="meta">best: —</div>
+</div>
+<script>
+(function(){if(window.Fly)return;function s(t,p){try{parent.postMessage({source:"fly",type:t,payload:p||null},"*")}catch(e){}}window.Fly={ready:()=>s("fly:ready"),interaction:k=>s("fly:interaction",{kind:k||null}),complete:()=>s("fly:complete"),catch:()=>s("fly:catch")};window.addEventListener("message",e=>{const d=e.data;if(!d||typeof d!=="object")return;if(d.type==="fly:active")window.dispatchEvent(new CustomEvent("fly:active"));if(d.type==="fly:pause")window.dispatchEvent(new CustomEvent("fly:pause"))});function r(){Fly.ready()}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",r,{once:true});else r();})();
+</script>
+<script>
+  const body = document.body;
+  const label = document.getElementById("label");
+  const big   = document.getElementById("big");
+  const meta  = document.getElementById("meta");
+  let state = "idle";   // idle | wait | go | done | early
+  let startT = 0, waitTimer = null, best = null;
+
+  function setState(s){
+    body.className = s;
+    state = s;
+  }
+  function arm(){
+    setState("wait"); label.textContent = "wait for green"; big.textContent = "·";
+    const delay = 900 + Math.random()*2400;
+    waitTimer = setTimeout(() => {
+      setState("go"); label.textContent = "now"; big.textContent = "tap!";
+      startT = performance.now();
+    }, delay);
+  }
+  function tap(){
+    Fly.interaction("tap");
+    if (state === "idle" || state === "done" || state === "early") { arm(); return; }
+    if (state === "wait") {
+      clearTimeout(waitTimer);
+      setState("early"); label.textContent = "too early — tap to retry"; big.textContent = "✗";
+      return;
+    }
+    if (state === "go") {
+      const t = Math.round(performance.now() - startT);
+      setState("done");
+      label.textContent = "your time — tap to try again";
+      big.textContent = `${t} ms`;
+      if (best === null || t < best) { best = t; meta.textContent = `best: ${best} ms`; Fly.complete(); }
+      return;
+    }
+  }
+  document.getElementById("wrap").addEventListener("click", tap);
+
+  window.addEventListener("fly:pause", () => { clearTimeout(waitTimer); if (state === "wait") setState("idle"); });
+</script>
+</body>
+</html>

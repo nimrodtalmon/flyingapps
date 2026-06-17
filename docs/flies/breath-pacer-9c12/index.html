@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="fly:tags" content="mindful,ambient,time">
+<title>Breath Pacer</title>
+<style>
+  html,body{margin:0;height:100%;background:radial-gradient(120% 80% at 50% 30%,#EAF6F4 0%,#F4F8FA 60%,#FFFFFF 100%);font-family:-apple-system,system-ui,sans-serif;color:#1A2330;overflow:hidden;-webkit-tap-highlight-color:transparent}
+  .wrap{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:24px}
+  .ring-wrap{position:relative;width:64vmin;height:64vmin;max-width:280px;max-height:280px;display:grid;place-items:center}
+  .ring{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 40% 35%,rgba(43,182,163,.22),rgba(45,125,210,.08) 70%);box-shadow:0 30px 60px -20px rgba(43,182,163,.25),inset 0 0 0 1px rgba(43,182,163,.15);transform:scale(.55);transition:transform 4s cubic-bezier(.45,0,.55,1)}
+  .core{position:relative;z-index:2;width:62%;height:62%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#EFF7F5 60%,#DBEDE9 100%);box-shadow:inset 0 1px 1px #fff,0 8px 22px rgba(46,80,110,.12);display:grid;place-items:center}
+  .phase{font-size:18px;letter-spacing:.18em;text-transform:lowercase;color:#1A2330;opacity:.78}
+  .secs{font-variant-numeric:tabular-nums;font-size:38px;font-weight:200;color:#2BB6A3;margin-top:2px;letter-spacing:.02em}
+  .meta{font-size:12px;letter-spacing:.18em;text-transform:lowercase;color:#8B97A6;text-align:center;line-height:1.6}
+  .meta strong{font-weight:400;color:#1A2330}
+  .btn{margin-top:6px;padding:10px 22px;font:inherit;font-size:13px;letter-spacing:.18em;text-transform:lowercase;border-radius:999px;border:1px solid rgba(43,182,163,.35);background:#fff;color:#2BB6A3;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ring-wrap">
+    <div id="ring" class="ring"></div>
+    <div class="core">
+      <div style="text-align:center">
+        <div id="phase" class="phase">ready</div>
+        <div id="secs" class="secs">0</div>
+      </div>
+    </div>
+  </div>
+  <div class="meta"><span id="cycle">cycle 0 of 4</span></div>
+  <button id="btn" class="btn">begin</button>
+</div>
+<script>
+(function(){if(window.Fly)return;function s(t,p){try{parent.postMessage({source:"fly",type:t,payload:p||null},"*")}catch(e){}}window.Fly={ready:()=>s("fly:ready"),interaction:k=>s("fly:interaction",{kind:k||null}),complete:()=>s("fly:complete"),catch:()=>s("fly:catch")};window.addEventListener("message",e=>{const d=e.data;if(!d||typeof d!=="object")return;if(d.type==="fly:active")window.dispatchEvent(new CustomEvent("fly:active"));if(d.type==="fly:pause")window.dispatchEvent(new CustomEvent("fly:pause"))});function r(){Fly.ready()}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",r,{once:true});else r();})();
+</script>
+<script>
+  const RING = document.getElementById("ring");
+  const PHASE = document.getElementById("phase");
+  const SECS  = document.getElementById("secs");
+  const CYCLE = document.getElementById("cycle");
+  const BTN   = document.getElementById("btn");
+
+  const SEQ = [
+    { name: "in",   secs: 4, scale: 1.0, ease: "cubic-bezier(.45,0,.55,1)" },
+    { name: "hold", secs: 4, scale: 1.0, ease: "linear" },
+    { name: "out",  secs: 6, scale: .55, ease: "cubic-bezier(.45,0,.55,1)" },
+  ];
+  const CYCLES = 4;
+
+  let running = false, cycle = 0, step = 0, tickT = null, phaseT = null;
+
+  function setPhase(name, secs, scale, ease){
+    PHASE.textContent = name;
+    SECS.textContent = secs;
+    RING.style.transition = `transform ${secs}s ${ease}`;
+    RING.style.transform = `scale(${scale})`;
+    let remaining = secs;
+    clearInterval(tickT);
+    tickT = setInterval(() => {
+      remaining -= 1;
+      if (remaining < 0) return;
+      SECS.textContent = remaining;
+    }, 1000);
+  }
+
+  function nextStep(){
+    if (!running) return;
+    const s = SEQ[step];
+    setPhase(s.name, s.secs, s.scale, s.ease);
+    phaseT = setTimeout(() => {
+      step += 1;
+      if (step >= SEQ.length) {
+        step = 0;
+        cycle += 1;
+        CYCLE.textContent = `cycle ${cycle} of ${CYCLES}`;
+        if (cycle >= CYCLES) { stop(true); return; }
+      }
+      nextStep();
+    }, s.secs * 1000);
+  }
+
+  function start(){
+    if (running) return;
+    running = true; cycle = 0; step = 0;
+    BTN.textContent = "stop";
+    CYCLE.textContent = `cycle ${cycle} of ${CYCLES}`;
+    Fly.interaction("start");
+    nextStep();
+  }
+  function stop(completed){
+    running = false;
+    clearTimeout(phaseT); clearInterval(tickT);
+    RING.style.transition = "transform 1.2s cubic-bezier(.45,0,.55,1)";
+    RING.style.transform = "scale(.55)";
+    PHASE.textContent = completed ? "done" : "paused";
+    SECS.textContent = completed ? "✓" : "·";
+    BTN.textContent = completed ? "again" : "resume";
+    if (completed) Fly.complete();
+  }
+
+  BTN.addEventListener("click", () => {
+    if (running) stop(false);
+    else         start();
+  });
+
+  window.addEventListener("fly:pause", () => { if (running) stop(false); });
+</script>
+</body>
+</html>

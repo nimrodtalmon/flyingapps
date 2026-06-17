@@ -1,0 +1,34 @@
+{
+  "ideas": [
+    {
+      "title": "pixel doodle",
+      "description": "small grid; tap to color cells; palette of 6. clear button. no save.",
+      "tags": ["creative", "visual", "playful"]
+    },
+    {
+      "title": "color palette",
+      "description": "tap to generate a 4-swatch harmonious palette. shows hex codes.",
+      "tags": ["creative", "color", "visual"]
+    },
+    {
+      "title": "string art",
+      "description": "circle of N evenly spaced points; connect with a fixed jump; slider changes N and the jump. produces star polygons.",
+      "tags": ["creative", "math", "visual"]
+    },
+    {
+      "title": "haiku composer",
+      "description": "three columns of pre-written 5/7/5 lines; tap a line to swap it for a new random one. produces semi-coherent haikus.",
+      "tags": ["creative", "text", "playful"]
+    },
+    {
+      "title": "blob shaper",
+      "description": "an organic blob with N control points; drag a slider to morph between three preset shapes via smooth interpolation.",
+      "tags": ["creative", "visual", "playful"]
+    },
+    {
+      "title": "type playground",
+      "description": "type into a big field; sliders change size, tracking, weight, line-height. show the live preview.",
+      "tags": ["creative", "text", "useful"]
+    }
+  ]
+}

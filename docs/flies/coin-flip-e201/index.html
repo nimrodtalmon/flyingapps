@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="fly:tags" content="tool,quick,decide">
+<title>Coin Flip</title>
+<style>
+  html,body{margin:0;height:100%;background:linear-gradient(180deg,#EAF1F6 0%,#F7FAFC 100%);font-family:-apple-system,system-ui,sans-serif;color:#1A2330;overflow:hidden;-webkit-tap-highlight-color:transparent}
+  .wrap{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:36px;padding:24px}
+  .scene{perspective:800px;width:60vmin;height:60vmin;max-width:240px;max-height:240px}
+  .coin{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform 1500ms cubic-bezier(.16,1,.3,1);cursor:pointer}
+  .face{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;font-size:54px;font-weight:200;letter-spacing:.06em;color:#1A2330;backface-visibility:hidden;box-shadow:inset 0 0 0 4px rgba(255,255,255,.6),0 14px 30px rgba(0,0,0,.12)}
+  .heads{background:radial-gradient(circle at 35% 30%,#FFE6A8,#E0902B 80%)}
+  .tails{background:radial-gradient(circle at 35% 30%,#E0F2EE,#2BB6A3 80%);transform:rotateX(180deg)}
+  .result{font-size:14px;letter-spacing:.22em;text-transform:lowercase;color:#8B97A6;font-variant-numeric:tabular-nums}
+  .tally{font-size:13px;letter-spacing:.18em;color:#8B97A6;text-transform:lowercase}
+  .tally span{color:#1A2330}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="result" class="result">tap to flip</div>
+  <div class="scene"><div id="coin" class="coin">
+    <div class="face heads">H</div>
+    <div class="face tails">T</div>
+  </div></div>
+  <div class="tally"><span id="h">0</span> heads · <span id="t">0</span> tails</div>
+</div>
+<script>
+(function(){if(window.Fly)return;function s(t,p){try{parent.postMessage({source:"fly",type:t,payload:p||null},"*")}catch(e){}}window.Fly={ready:()=>s("fly:ready"),interaction:k=>s("fly:interaction",{kind:k||null}),complete:()=>s("fly:complete"),catch:()=>s("fly:catch")};window.addEventListener("message",e=>{const d=e.data;if(!d||typeof d!=="object")return;if(d.type==="fly:active")window.dispatchEvent(new CustomEvent("fly:active"));if(d.type==="fly:pause")window.dispatchEvent(new CustomEvent("fly:pause"))});function r(){Fly.ready()}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",r,{once:true});else r();})();
+</script>
+<script>
+  const coin = document.getElementById("coin");
+  const resultEl = document.getElementById("result");
+  let h=0, t=0, base = 0, busy = false;
+  coin.addEventListener("click", () => {
+    if (busy) return; busy = true;
+    const heads = Math.random() < 0.5;
+    const extra = 5 + Math.floor(Math.random()*3); // half-turns
+    base += extra*180 + (heads ? 0 : 180) - (base % 360);
+    coin.style.transform = `rotateX(${base}deg)`;
+    setTimeout(() => {
+      busy = false;
+      if (heads) { h++; document.getElementById("h").textContent = h; }
+      else       { t++; document.getElementById("t").textContent = t; }
+      resultEl.textContent = heads ? "heads" : "tails";
+      Fly.interaction("flip");
+    }, 1500);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# hatchery
+hatchery/_quarantine/
+hatchery/__pycache__/
+hatchery/.venv/
+*.pyc
+
+# editor / OS
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="fly:tags" content="tool,quick,useful">
+<title>Tally Counter</title>
+<style>
+  html,body{margin:0;height:100%;background:linear-gradient(180deg,#EAF1F6 0%,#F7FAFC 100%);font-family:-apple-system,system-ui,sans-serif;color:#1A2330;overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none}
+  .wrap{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px}
+  .num{font-variant-numeric:tabular-nums;font-size:34vmin;line-height:1;font-weight:100;color:#1A2330;letter-spacing:-.04em;transition:transform 240ms cubic-bezier(.16,1,.3,1)}
+  .num.bump{transform:scale(1.05)}
+  .row{display:flex;gap:14px}
+  .btn{font:inherit;font-size:13px;letter-spacing:.18em;text-transform:lowercase;border-radius:999px;border:1px solid rgba(26,35,48,.12);background:#fff;color:#1A2330;padding:10px 20px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .btn.minus{color:#8B97A6}
+  .btn.reset{color:#E15B45;border-color:rgba(225,91,69,.25)}
+  .meta{font-size:12px;letter-spacing:.18em;text-transform:lowercase;color:#8B97A6}
+  .tap{position:absolute;inset:0;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="meta" class="meta">tap anywhere</div>
+  <div id="num" class="num">0</div>
+  <div class="row">
+    <button id="minus" class="btn minus" type="button">−1</button>
+    <button id="reset" class="btn reset" type="button">reset</button>
+  </div>
+</div>
+<div class="tap" id="tap"></div>
+<script>
+(function(){if(window.Fly)return;function s(t,p){try{parent.postMessage({source:"fly",type:t,payload:p||null},"*")}catch(e){}}window.Fly={ready:()=>s("fly:ready"),interaction:k=>s("fly:interaction",{kind:k||null}),complete:()=>s("fly:complete"),catch:()=>s("fly:catch")};window.addEventListener("message",e=>{const d=e.data;if(!d||typeof d!=="object")return;if(d.type==="fly:active")window.dispatchEvent(new CustomEvent("fly:active"));if(d.type==="fly:pause")window.dispatchEvent(new CustomEvent("fly:pause"))});function r(){Fly.ready()}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",r,{once:true});else r();})();
+</script>
+<script>
+  let n = 0;
+  const numEl = document.getElementById("num");
+  function set(v){
+    n = Math.max(0, v);
+    numEl.textContent = String(n);
+    numEl.classList.remove("bump"); void numEl.offsetWidth; numEl.classList.add("bump");
+  }
+  document.getElementById("tap").addEventListener("click", (e) => {
+    set(n+1); Fly.interaction("tap");
+    e.stopPropagation();
+  });
+  document.getElementById("minus").addEventListener("click", (e) => {
+    e.stopPropagation(); set(n-1); Fly.interaction("minus");
+  });
+  document.getElementById("reset").addEventListener("click", (e) => {
+    e.stopPropagation(); set(0); Fly.interaction("reset");
+  });
+</script>
+</body>
+</html>
