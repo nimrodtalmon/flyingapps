@@ -4,6 +4,7 @@
   "flies": [
     {
       "id": "tide-clock-7f3a",
+      "concept": "tide-clock",
       "title": "Tide Clock",
       "tags": ["time", "ambient", "visual"],
       "category": "tools",
@@ -15,6 +16,7 @@
     },
     {
       "id": "breath-pacer-9c12",
+      "concept": "breath-pacer",
       "title": "Breath Pacer",
       "tags": ["mindful", "ambient", "time"],
       "category": "mindful",
@@ -25,7 +27,20 @@
       "aspect": "portrait"
     },
     {
+      "id": "box-breath-1a2c",
+      "concept": "breath-pacer",
+      "title": "Box Breath",
+      "tags": ["mindful", "ambient", "time"],
+      "category": "mindful",
+      "path": "flies/box-breath-1a2c/index.html",
+      "source": "template",
+      "created": "2026-06-20",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
       "id": "starfield-2ba8",
+      "concept": "starfield",
       "title": "Starfield",
       "tags": ["visual", "ambient", "generative"],
       "category": "visuals",
@@ -37,6 +52,7 @@
     },
     {
       "id": "mood-ring-4d51",
+      "concept": "mood-ring",
       "title": "Mood Ring",
       "tags": ["ambient", "visual", "color"],
       "category": "visuals",
@@ -47,7 +63,20 @@
       "aspect": "portrait"
     },
     {
+      "id": "mood-sun-8e22",
+      "concept": "mood-ring",
+      "title": "Mood Sun",
+      "tags": ["ambient", "visual", "color"],
+      "category": "visuals",
+      "path": "flies/mood-sun-8e22/index.html",
+      "source": "template",
+      "created": "2026-06-20",
+      "prior": 1.0,
+      "aspect": "portrait"
+    },
+    {
       "id": "coin-flip-e201",
+      "concept": "coin-flip",
       "title": "Coin Flip",
       "tags": ["tool", "quick", "decide"],
       "category": "tools",
@@ -59,6 +88,7 @@
     },
     {
       "id": "tally-counter-b8f4",
+      "concept": "tally-counter",
       "title": "Tally Counter",
       "tags": ["tool", "quick", "useful"],
       "category": "tools",
@@ -70,6 +100,7 @@
     },
     {
       "id": "roll-die-3a17",
+      "concept": "roll-die",
       "title": "Roll Die",
       "tags": ["tool", "quick", "game"],
       "category": "tools",
@@ -81,6 +112,7 @@
     },
     {
       "id": "reaction-timer-6e93",
+      "concept": "reaction-timer",
       "title": "Reaction",
       "tags": ["game", "reflex", "quick"],
       "category": "games",
@@ -92,6 +124,7 @@
     },
     {
       "id": "pixel-doodle-c4a2",
+      "concept": "pixel-doodle",
       "title": "Pixel Doodle",
       "tags": ["creative", "visual", "playful"],
       "category": "creative",
@@ -103,6 +136,7 @@
     },
     {
       "id": "color-sample-d50f",
+      "concept": "color-sample",
       "title": "Color Sample",
       "tags": ["creative", "visual", "color"],
       "category": "creative",
@@ -114,6 +148,7 @@
     },
     {
       "id": "word-daisy-a7c3",
+      "concept": "word-daisy",
       "title": "Word Daisy",
       "tags": ["text", "playful", "word"],
       "category": "word",
@@ -125,6 +160,7 @@
     },
     {
       "id": "tip-calc-f819",
+      "concept": "tip-calc",
       "title": "Tip Split",
       "tags": ["tool", "useful", "calc"],
       "category": "tools",
@@ -136,6 +172,7 @@
     },
     {
       "id": "pebbles-91be",
+      "concept": "pebbles",
       "title": "Pebbles",
       "tags": ["ambient", "mindful", "visual"],
       "category": "mindful",

@@ -1,24 +1,26 @@
-// Feed client — manifest loader, scroll-snap loop, prefetch, SDK bridge, jar.
+// Feed client — manifest loader, scroll-snap loop, variant switcher, jar.
 
 import { STRINGS } from "./strings.js";
-import { Recommender } from "./recommender.js";
+import { Recommender, conceptOf } from "./recommender.js";
 import {
   computeReward, isEngaged,
   getSeen, markSeen,
-  getJar, addToJar,
+  getJar, addToJar, removeFromJar,
   saveTrace, countTraces,
+  updateFlyStats, flyPosteriorMean,
+  setLastVariant,
 } from "./signals.js";
 
-const BUFFER_LOOK_AHEAD = 2;       // ensure this many slots after the active one
-const LAZY_UNMOUNT_DISTANCE = 2;   // slots further than this get unmounted
+const BUFFER_LOOK_AHEAD = 2;
+const LAZY_UNMOUNT_DISTANCE = 2;
 const HINT_KEY = "fa.hinted.v1";
 
 let manifest = null;
 let recommender = null;
 let feedEl = null;
 
-const slots = [];                  // [{ el, iframe, fly, mounted, isActive, signals }]
-const sessionSeen = new Set();
+const slots = [];
+const sessionSeen = new Set();      // of concept ids
 let activeIdx = -1;
 let scrollDebounce = null;
 
@@ -31,37 +33,40 @@ async function main() {
     const res = await fetch("manifest.json", { cache: "no-cache" });
     manifest = await res.json();
   } catch (e) {
-    feedEl.innerHTML = `<div class="slot"><div class="frame" style="display:grid;place-items:center;color:#8B97A6;letter-spacing:.1em;text-transform:lowercase;">no swarm yet</div></div>`;
+    showEmpty("no swarm yet");
     return;
   }
 
   if (!manifest.flies || manifest.flies.length === 0) {
-    feedEl.innerHTML = `<div class="slot"><div class="frame" style="display:grid;place-items:center;color:#8B97A6;letter-spacing:.1em;text-transform:lowercase;">the swarm is empty</div></div>`;
+    showEmpty("the swarm is empty");
     return;
   }
 
   recommender = new Recommender(manifest.flies);
 
-  // Initial buffer: pick the first BUFFER_LOOK_AHEAD + 1 Flies.
   for (let i = 0; i <= BUFFER_LOOK_AHEAD; i++) {
-    const fly = recommender.pick(sessionSeen, getSeen(), countTraces());
-    if (!fly) break;
-    sessionSeen.add(fly.id);
-    appendSlot(fly);
+    const pick = recommender.pick(sessionSeen, getSeen(), countTraces());
+    if (!pick) break;
+    sessionSeen.add(pick.concept);
+    appendSlot(pick);
   }
 
   feedEl.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("message", onFlyMessage);
+  window.addEventListener("keydown", onKeydown);
   setupJar();
   maybeShowHint();
 
-  // Activate the first slot.
   requestAnimationFrame(() => setActive(0));
+}
+
+function showEmpty(msg) {
+  feedEl.innerHTML = `<div class="slot"><div class="frame" style="display:grid;place-items:center;color:#8B97A6;letter-spacing:.1em;text-transform:lowercase;">${msg}</div></div>`;
 }
 
 // ---- slot lifecycle ------------------------------------------------------
 
-function appendSlot(fly) {
+function appendSlot(pick) {
   const idx = slots.length;
   const slotEl = document.createElement("div");
   slotEl.className = "slot";
@@ -69,7 +74,6 @@ function appendSlot(fly) {
 
   const titleEl = document.createElement("div");
   titleEl.className = "title";
-  titleEl.textContent = fly.title || "fly";
 
   const frameEl = document.createElement("div");
   frameEl.className = "frame";
@@ -77,9 +81,26 @@ function appendSlot(fly) {
   const iframe = document.createElement("iframe");
   iframe.setAttribute("sandbox", "allow-scripts");
   iframe.setAttribute("loading", "lazy");
-  iframe.setAttribute("title", fly.title || "fly");
-  iframe.src = fly.path;
   frameEl.appendChild(iframe);
+
+  // Bottom chrome: variant nav + catch.
+  const chromeEl = document.createElement("div");
+  chromeEl.className = "chrome";
+
+  const prevEl = document.createElement("button");
+  prevEl.className = "chev prev";
+  prevEl.setAttribute("aria-label", "previous version");
+  prevEl.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  prevEl.addEventListener("click", (e) => { e.stopPropagation(); switchVariant(idx, -1); });
+
+  const dotsEl = document.createElement("div");
+  dotsEl.className = "dots";
+
+  const nextEl = document.createElement("button");
+  nextEl.className = "chev next";
+  nextEl.setAttribute("aria-label", "next version");
+  nextEl.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  nextEl.addEventListener("click", (e) => { e.stopPropagation(); switchVariant(idx, +1); });
 
   const catchBtn = document.createElement("button");
   catchBtn.className = "catch";
@@ -87,7 +108,12 @@ function appendSlot(fly) {
   catchBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18"><path d="M7 4h10v2H7zM6 7h12v2.5a4 4 0 0 1-1 2.5V19a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-7a4 4 0 0 1-1-2.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
   catchBtn.addEventListener("click", (e) => { e.stopPropagation(); onCatch(idx); });
 
-  // Double-tap on the slot = quick catch.
+  chromeEl.appendChild(prevEl);
+  chromeEl.appendChild(dotsEl);
+  chromeEl.appendChild(nextEl);
+  chromeEl.appendChild(catchBtn);
+
+  // Double-tap on the slot background = quick catch.
   let lastTap = 0;
   slotEl.addEventListener("pointerdown", (e) => {
     const now = performance.now();
@@ -97,20 +123,56 @@ function appendSlot(fly) {
 
   slotEl.appendChild(titleEl);
   slotEl.appendChild(frameEl);
-  slotEl.appendChild(catchBtn);
+  slotEl.appendChild(chromeEl);
   feedEl.appendChild(slotEl);
 
-  slots.push({
+  const variants = pick.variants;
+  const variantIdx = Math.max(0, variants.findIndex(v => v.id === pick.defaultVariant.id));
+  const slot = {
     el: slotEl,
     iframe,
+    titleEl,
     catchEl: catchBtn,
-    fly,
+    prevEl, nextEl, dotsEl,
+    concept: pick.concept,
+    variants,
+    variantIdx,
+    fly: variants[variantIdx],
     mounted: true,
-    signals: freshSignals(fly),
-  });
+    signals: freshSignals(variants[variantIdx]),
+  };
+  slots.push(slot);
 
-  // Mark mounted on next frame for the drift-in transition.
+  renderSlotUI(slot);
+  iframe.src = slot.fly.path;
+
   requestAnimationFrame(() => slotEl.classList.add("is-mounted"));
+}
+
+function renderSlotUI(slot) {
+  slot.titleEl.textContent = slot.fly.title || "fly";
+  slot.iframe.setAttribute("title", slot.fly.title || "fly");
+  // Dots
+  const n = slot.variants.length;
+  if (n > 1) {
+    slot.el.classList.add("has-variants");
+    slot.dotsEl.innerHTML = "";
+    for (let i = 0; i < n; i++) {
+      const dot = document.createElement("button");
+      dot.className = "dot" + (i === slot.variantIdx ? " is-active" : "");
+      dot.setAttribute("aria-label", `version ${i + 1}`);
+      dot.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = slots.indexOf(slot);
+        if (idx !== -1 && i !== slot.variantIdx) switchVariant(idx, i - slot.variantIdx);
+      });
+      slot.dotsEl.appendChild(dot);
+    }
+  } else {
+    slot.el.classList.remove("has-variants");
+    slot.dotsEl.innerHTML = "";
+  }
+  slot.catchEl.classList.toggle("is-caught", getJar().includes(slot.fly.id));
 }
 
 function freshSignals(fly) {
@@ -123,6 +185,39 @@ function freshSignals(fly) {
     caught: getJar().includes(fly.id),
     startTime: null,
   };
+}
+
+function switchVariant(slotIdx, delta) {
+  const slot = slots[slotIdx];
+  if (!slot || slot.variants.length <= 1) return;
+  const n = slot.variants.length;
+  const newIdx = (slot.variantIdx + delta + n) % n;
+  if (newIdx === slot.variantIdx) return;
+
+  // Finalize signals on the variant we're leaving.
+  finalizeSlot(slotIdx);
+
+  slot.variantIdx = newIdx;
+  slot.fly = slot.variants[newIdx];
+  slot.signals = freshSignals(slot.fly);
+  setLastVariant(slot.concept, slot.fly.id);
+
+  // Subtle cross-fade: pulse the frame, swap the iframe src.
+  slot.el.classList.add("is-variant-swap");
+  postToIframe(slot.iframe, "fly:pause");
+  slot.iframe.src = slot.fly.path;
+  setTimeout(() => slot.el.classList.remove("is-variant-swap"), 320);
+
+  renderSlotUI(slot);
+
+  // If this is the active slot, restart the dwell clock and re-mark active
+  // (finalizeSlot stripped the is-active class).
+  if (slotIdx === activeIdx) {
+    slot.signals.startTime = performance.now();
+    markSeen(slot.fly.id);
+    slot.el.classList.add("is-active", "is-settled");
+    setTimeout(() => postToIframe(slot.iframe, "fly:active"), 160);
+  }
 }
 
 // ---- scroll → active tracking -------------------------------------------
@@ -143,42 +238,33 @@ function setActive(idx) {
   const prev = activeIdx;
   activeIdx = idx;
 
-  // Finalize previous Fly's signals → reward → posterior update.
-  if (prev >= 0 && prev < slots.length) {
-    finalizeSlot(prev);
-  }
+  if (prev >= 0 && prev < slots.length) finalizeSlot(prev);
 
   const s = slots[idx];
   if (!s) return;
 
-  // First-visit hint vanishes after first advance.
   if (prev !== -1) dismissHint();
 
   s.el.classList.add("is-active");
-  // Settle title to corner after a moment.
   setTimeout(() => s.el.classList.add("is-settled"), 1400);
 
-  // Reset signals and start the dwell clock.
   s.signals = freshSignals(s.fly);
   s.signals.startTime = performance.now();
   markSeen(s.fly.id);
 
-  // Send fly:active to the active iframe, fly:pause to others nearby.
   postToIframe(s.iframe, "fly:active");
   for (let i = 0; i < slots.length; i++) {
     if (i === idx) continue;
     postToIframe(slots[i].iframe, "fly:pause");
   }
 
-  // Ensure we have enough lookahead.
   while (slots.length - 1 < idx + BUFFER_LOOK_AHEAD) {
-    const fly = recommender.pick(sessionSeen, getSeen(), countTraces());
-    if (!fly) break;
-    sessionSeen.add(fly.id);
-    appendSlot(fly);
+    const pick = recommender.pick(sessionSeen, getSeen(), countTraces());
+    if (!pick) break;
+    sessionSeen.add(pick.concept);
+    appendSlot(pick);
   }
 
-  // Lazy-unmount far-away iframes to cap memory.
   for (let i = 0; i < slots.length; i++) {
     if (Math.abs(i - idx) > LAZY_UNMOUNT_DISTANCE) unmountSlot(i);
     else                                            ensureMounted(i);
@@ -196,9 +282,11 @@ function finalizeSlot(idx) {
   const reward = computeReward(sig);
   const engaged = isEngaged(reward);
   recommender.update(sig.tags || [], engaged);
+  updateFlyStats(sig.id, engaged);
 
   saveTrace({
     id: sig.id,
+    concept: s.concept,
     tags: sig.tags,
     dwell_ms: Math.round(sig.dwell_ms),
     interactions: sig.interactions,
@@ -234,7 +322,6 @@ function postToIframe(iframe, type) {
 function onFlyMessage(e) {
   const d = e.data;
   if (!d || d.source !== "fly") return;
-  // Trust by matching event.source against a known iframe.
   let owner = -1;
   for (let i = 0; i < slots.length; i++) {
     if (slots[i].iframe.contentWindow === e.source) { owner = i; break; }
@@ -243,19 +330,19 @@ function onFlyMessage(e) {
   const s = slots[owner];
 
   switch (d.type) {
-    case "fly:ready":
-      // already mounted CSS-wise; nothing to do.
-      break;
-    case "fly:interaction":
-      s.signals.interactions += 1;
-      break;
-    case "fly:complete":
-      s.signals.completed = true;
-      break;
-    case "fly:catch":
-      onCatch(owner);
-      break;
+    case "fly:ready":      break;
+    case "fly:interaction": s.signals.interactions += 1; break;
+    case "fly:complete":    s.signals.completed = true;  break;
+    case "fly:catch":       onCatch(owner);              break;
   }
+}
+
+function onKeydown(e) {
+  if (activeIdx < 0) return;
+  const tag = (e.target && e.target.tagName) || "";
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  if (e.key === "ArrowLeft")  { e.preventDefault(); switchVariant(activeIdx, -1); }
+  if (e.key === "ArrowRight") { e.preventDefault(); switchVariant(activeIdx, +1); }
 }
 
 // ---- catch / jar ---------------------------------------------------------
@@ -279,69 +366,126 @@ function spawnPuff(slotEl) {
   setTimeout(() => p.remove(), 750);
 }
 
+// ---- jar -----------------------------------------------------------------
+
+let jarOpen = false;
+
 function setupJar() {
   const btn = document.getElementById("jar-button");
   const jar = document.getElementById("jar");
   const close = document.getElementById("jar-close");
-  const grid = document.getElementById("jar-grid");
-  const empty = document.getElementById("jar-empty");
 
   updateJarBadge();
   btn.hidden = false;
 
   btn.addEventListener("click", () => openJar());
   close.addEventListener("click", () => closeJar());
+  jar.addEventListener("click", (e) => { if (e.target === jar) closeJar(); });
+}
 
-  function openJar() {
-    const ids = getJar();
-    grid.innerHTML = "";
-    if (ids.length === 0) {
-      empty.hidden = false;
-      empty.textContent = STRINGS.jarEmpty;
-    } else {
-      empty.hidden = true;
-      const byId = Object.fromEntries(manifest.flies.map(f => [f.id, f]));
-      for (const id of ids) {
-        const fly = byId[id];
-        if (!fly) continue;
-        const tile = document.createElement("div");
-        tile.className = "jar-tile";
+function openJar() {
+  if (jarOpen) return;
+  jarOpen = true;
+  renderJarGrid();
+  const jar = document.getElementById("jar");
+  jar.hidden = false;
+  jar.classList.remove("is-closing");
+  jar.classList.add("is-open");
+}
 
-        const tIframe = document.createElement("iframe");
-        tIframe.setAttribute("sandbox", "allow-scripts");
-        tIframe.src = fly.path;
-        tile.appendChild(tIframe);
+function closeJar() {
+  if (!jarOpen) return;
+  const jar = document.getElementById("jar");
+  jar.classList.add("is-closing");
+  jar.classList.remove("is-open");
+  setTimeout(() => {
+    jar.hidden = true;
+    jar.classList.remove("is-closing");
+    jarOpen = false;
+  }, 320);
+}
 
-        const label = document.createElement("div");
-        label.className = "label";
-        label.textContent = fly.title || "fly";
-        tile.appendChild(label);
-
-        tile.addEventListener("click", () => openRelease(fly));
-        grid.appendChild(tile);
-      }
-    }
-    jar.hidden = false;
+function renderJarGrid() {
+  const grid = document.getElementById("jar-grid");
+  const empty = document.getElementById("jar-empty");
+  const ids = getJar();
+  grid.innerHTML = "";
+  if (ids.length === 0) {
+    empty.hidden = false;
+    empty.textContent = STRINGS.jarEmpty;
+    return;
   }
-  function closeJar() { jar.hidden = true; }
+  empty.hidden = true;
+  const byId = Object.fromEntries(manifest.flies.map(f => [f.id, f]));
+  // newest first
+  for (const id of [...ids].reverse()) {
+    const fly = byId[id];
+    if (!fly) continue;
+    const tile = document.createElement("button");
+    tile.className = "jar-tile";
+    tile.type = "button";
 
-  function openRelease(fly) {
-    const wrap = document.createElement("div");
-    wrap.className = "release";
-    wrap.innerHTML = `
-      <header>
-        <button class="release-back" type="button">${STRINGS.releaseBack}</button>
-        <span style="color:var(--muted);font-size:13px;letter-spacing:.12em;text-transform:lowercase;">${fly.title || "fly"}</span>
-        <span style="width:80px;"></span>
-      </header>
-    `;
-    const rIframe = document.createElement("iframe");
-    rIframe.setAttribute("sandbox", "allow-scripts");
-    rIframe.src = fly.path;
-    wrap.appendChild(rIframe);
-    wrap.querySelector(".release-back").addEventListener("click", () => wrap.remove());
-    document.body.appendChild(wrap);
+    const tIframe = document.createElement("iframe");
+    tIframe.setAttribute("sandbox", "allow-scripts");
+    tIframe.setAttribute("tabindex", "-1");
+    tIframe.src = fly.path;
+    tile.appendChild(tIframe);
+
+    const label = document.createElement("div");
+    label.className = "label";
+    label.textContent = fly.title || "fly";
+    tile.appendChild(label);
+
+    tile.addEventListener("click", () => openRelease(fly, tile));
+    grid.appendChild(tile);
   }
+}
+
+function openRelease(fly, sourceTile) {
+  const wrap = document.createElement("div");
+  wrap.className = "release";
+  wrap.innerHTML = `
+    <header>
+      <button class="release-back" type="button">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ${STRINGS.releaseBack}
+      </button>
+      <span class="release-title">${escapeHtml(fly.title || "fly")}</span>
+      <button class="release-remove" type="button">release</button>
+    </header>
+  `;
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("sandbox", "allow-scripts");
+  iframe.src = fly.path;
+  wrap.appendChild(iframe);
+
+  // FLIP-style origin: scale up from the tile's bounding rect.
+  if (sourceTile) {
+    const r = sourceTile.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top  + r.height / 2;
+    wrap.style.transformOrigin = `${cx}px ${cy}px`;
+  }
+
+  document.body.appendChild(wrap);
+  requestAnimationFrame(() => wrap.classList.add("is-open"));
+
+  function close() {
+    wrap.classList.remove("is-open");
+    wrap.classList.add("is-closing");
+    setTimeout(() => wrap.remove(), 320);
+  }
+  wrap.querySelector(".release-back").addEventListener("click", close);
+  wrap.querySelector(".release-remove").addEventListener("click", () => {
+    removeFromJar(fly.id);
+    updateJarBadge();
+    renderJarGrid();
+    close();
+  });
+
+  // Esc closes too.
+  function onKey(e) { if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); } }
+  document.addEventListener("keydown", onKey);
 }
 
 function updateJarBadge() {
@@ -349,6 +493,10 @@ function updateJarBadge() {
   const badge = document.getElementById("jar-count");
   if (count > 0) { badge.hidden = false; badge.textContent = String(count); }
   else            { badge.hidden = true;  badge.textContent = ""; }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 }
 
 // ---- onboarding hint -----------------------------------------------------
@@ -362,20 +510,21 @@ function maybeShowHint() {
 function dismissHint() {
   const hint = document.getElementById("hint");
   if (!hint || hint.hidden) return;
-  hint.style.transition = "opacity 360ms ease";
-  hint.style.opacity = "0";
-  setTimeout(() => hint.hidden = true, 400);
+  hint.classList.add("is-out");
+  setTimeout(() => hint.hidden = true, 360);
   localStorage.setItem(HINT_KEY, "1");
 }
 
-// ---- expose a small debug surface for dev poking ------------------------
+// ---- debug surface -------------------------------------------------------
 
 window.FA = {
   manifest: () => manifest,
   posteriors: () => recommender?.posteriors,
+  flyStats: () => JSON.parse(localStorage.getItem("fa.fly_stats.v1") || "{}"),
   traces: () => JSON.parse(localStorage.getItem("fa.traces.v1") || "[]"),
   reset: () => {
-    ["fa.seen.v1","fa.jar.v1","fa.traces.v1","fa.post.v1","fa.hinted.v1"].forEach(k => localStorage.removeItem(k));
+    ["fa.seen.v1","fa.jar.v1","fa.traces.v1","fa.post.v1","fa.hinted.v1","fa.fly_stats.v1","fa.last_variant.v1"]
+      .forEach(k => localStorage.removeItem(k));
     location.reload();
   },
 };

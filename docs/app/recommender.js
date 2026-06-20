@@ -56,17 +56,33 @@ function sampleBeta(a, b) {
   return x / (x + y);
 }
 
+import { flyPosteriorMean, getLastVariant } from "./signals.js";
+
+export function conceptOf(fly) {
+  return fly.concept || fly.id.replace(/-[a-f0-9]{3,8}$/, "") || fly.id;
+}
+
 // Public API ---------------------------------------------------------------
 
 export class Recommender {
   constructor(catalog) {
-    this.catalog = catalog;             // array of fly entries from manifest
+    this.catalog = catalog;
     this.byId = Object.fromEntries(catalog.map(f => [f.id, f]));
+
+    // Group by concept.
+    this.byConcept = {};
+    for (const f of catalog) {
+      const c = conceptOf(f);
+      (this.byConcept[c] = this.byConcept[c] || []).push(f);
+    }
+    this.conceptIds = Object.keys(this.byConcept);
+
     this.posteriors = loadPosteriors();
-    this.recentTags = [];               // last DIVERSITY_WINDOW × tag sets
+    this.recentTags = [];   // last DIVERSITY_WINDOW × tag sets
   }
 
-  // Update on leaving a Fly.
+  // Update on leaving a Fly. Updates tag posteriors. The caller updates per-fly
+  // stats separately so the recommender stays a pure function of localStorage.
   update(tags, engaged) {
     for (const t of tags) {
       const arm = getArm(this.posteriors, t);
@@ -78,89 +94,128 @@ export class Recommender {
     if (this.recentTags.length > DIVERSITY_WINDOW) this.recentTags.shift();
   }
 
-  // Posterior mean (for inspection)
   tagPosteriorMean(tag) {
     const arm = this.posteriors[tag];
     if (!arm) return 0.5;
     return arm.a / (arm.a + arm.b);
   }
 
-  // True if we are still in the cold-start phase.
   inColdStart(traceCount) {
     return (traceCount || 0) < COLD_START_THRESHOLD;
   }
 
-  // Eligible: not in session seen-set, not in cross-session cooldown.
-  _eligible(sessionSeen, persistentSeen) {
-    const now = Date.now();
-    return this.catalog.filter(f => {
-      if (sessionSeen.has(f.id)) return false;
-      const lastSeen = persistentSeen[f.id];
-      if (lastSeen && (now - lastSeen) < COOLDOWN_MS) return false;
-      return true;
-    });
+  // Variants of a concept — exposed for the slot UI.
+  variantsOf(conceptId) {
+    return this.byConcept[conceptId] || [];
   }
 
-  _diversityPenalty(fly) {
-    if (this.recentTags.length === 0) return 1.0;
-    let overlap = 0;
-    for (const tagSet of this.recentTags) {
-      for (const t of fly.tags) {
-        if (tagSet.includes(t)) { overlap++; break; }
-      }
+  // Default variant of a concept:
+  //   1. user's last manual pick for this concept (sticky preference)
+  //   2. variant with the highest per-fly posterior mean
+  //   3. first in manifest order
+  defaultVariant(conceptId) {
+    const variants = this.byConcept[conceptId] || [];
+    if (variants.length === 0) return null;
+    if (variants.length === 1) return variants[0];
+
+    const lastId = getLastVariant(conceptId);
+    if (lastId) {
+      const hit = variants.find(v => v.id === lastId);
+      if (hit) return hit;
     }
-    // Each window-Fly that shared a tag drags the score down a bit.
-    return Math.pow(1 - DIVERSITY_PENALTY, overlap);
-  }
-
-  _scoreCandidate(fly) {
-    let s = 0;
-    for (const t of fly.tags) {
-      const arm = getArm(this.posteriors, t);
-      s += sampleBeta(arm.a, arm.b);
-    }
-    const mean = s / Math.max(fly.tags.length, 1);
-    return mean * (fly.prior || 1.0) * this._diversityPenalty(fly);
-  }
-
-  // sessionSeen: Set of ids served this session.
-  // persistentSeen: { id: timestamp_ms } from localStorage.
-  pick(sessionSeen, persistentSeen, traceCount) {
-    let pool = this._eligible(sessionSeen, persistentSeen);
-
-    // If we ran out (small swarm, all seen), drop the persistent cooldown.
-    if (pool.length === 0) {
-      pool = this.catalog.filter(f => !sessionSeen.has(f.id));
-    }
-    // Still empty? Allow repeats — better than a blank screen.
-    if (pool.length === 0) pool = this.catalog.slice();
-    if (pool.length === 0) return null;
-
-    if (this.inColdStart(traceCount)) {
-      return this._coldStartPick(pool);
-    }
-
-    let best = pool[0];
-    let bestScore = -Infinity;
-    for (const f of pool) {
-      const s = this._scoreCandidate(f);
-      if (s > bestScore) { bestScore = s; best = f; }
+    let best = variants[0], bestMean = -1;
+    for (const v of variants) {
+      const m = flyPosteriorMean(v.id);
+      if (m > bestMean) { bestMean = m; best = v; }
     }
     return best;
   }
 
+  // Eligible concepts: none of their variants are in this session's seen-set,
+  // and at least one variant is out of cross-session cooldown.
+  _eligibleConcepts(sessionSeenConcepts, persistentSeen) {
+    const now = Date.now();
+    const out = [];
+    for (const c of this.conceptIds) {
+      if (sessionSeenConcepts.has(c)) continue;
+      const variants = this.byConcept[c];
+      const anyFresh = variants.some(v => {
+        const t = persistentSeen[v.id];
+        return !t || (now - t) >= COOLDOWN_MS;
+      });
+      if (anyFresh) out.push(c);
+    }
+    return out;
+  }
+
+  _diversityPenalty(tagUnion) {
+    if (this.recentTags.length === 0) return 1.0;
+    let overlap = 0;
+    for (const tagSet of this.recentTags) {
+      for (const t of tagUnion) {
+        if (tagSet.includes(t)) { overlap++; break; }
+      }
+    }
+    return Math.pow(1 - DIVERSITY_PENALTY, overlap);
+  }
+
+  _scoreConcept(conceptId) {
+    // A concept's score is the max of its variants' Thompson scores. The
+    // strongest variant gets to advocate for the concept being picked.
+    const variants = this.byConcept[conceptId];
+    let best = -Infinity;
+    const tagUnion = new Set();
+    for (const v of variants) {
+      let s = 0;
+      for (const t of (v.tags || [])) {
+        const arm = getArm(this.posteriors, t);
+        s += sampleBeta(arm.a, arm.b);
+        tagUnion.add(t);
+      }
+      const mean = s / Math.max((v.tags || []).length, 1);
+      const score = mean * (v.prior || 1.0);
+      if (score > best) best = score;
+    }
+    return best * this._diversityPenalty([...tagUnion]);
+  }
+
+  // Returns { concept, variants, defaultVariant } or null.
+  pick(sessionSeenConcepts, persistentSeen, traceCount) {
+    let pool = this._eligibleConcepts(sessionSeenConcepts, persistentSeen);
+    if (pool.length === 0) {
+      pool = this.conceptIds.filter(c => !sessionSeenConcepts.has(c));
+    }
+    if (pool.length === 0) pool = this.conceptIds.slice();
+    if (pool.length === 0) return null;
+
+    let chosen;
+    if (this.inColdStart(traceCount)) {
+      chosen = this._coldStartPick(pool);
+    } else {
+      let best = pool[0], bestScore = -Infinity;
+      for (const c of pool) {
+        const s = this._scoreConcept(c);
+        if (s > bestScore) { bestScore = s; best = c; }
+      }
+      chosen = best;
+    }
+    return {
+      concept: chosen,
+      variants: this.byConcept[chosen],
+      defaultVariant: this.defaultVariant(chosen),
+    };
+  }
+
   // Round-robin over categories — one per category, shuffled within.
-  _coldStartPick(pool) {
+  _coldStartPick(conceptPool) {
     const byCat = {};
-    for (const f of pool) {
-      const c = f.category || "_";
-      (byCat[c] = byCat[c] || []).push(f);
+    for (const c of conceptPool) {
+      const cat = this.byConcept[c][0].category || "_";
+      (byCat[cat] = byCat[cat] || []).push(c);
     }
     const cats = Object.keys(byCat);
-    if (cats.length === 0) return pool[Math.floor(Math.random() * pool.length)];
-
-    // Pick the category least represented in recentTags so far.
-    let pickedCat = cats[Math.floor(Math.random() * cats.length)];
+    if (cats.length === 0) return conceptPool[Math.floor(Math.random() * conceptPool.length)];
+    const pickedCat = cats[Math.floor(Math.random() * cats.length)];
     const arr = byCat[pickedCat];
     return arr[Math.floor(Math.random() * arr.length)];
   }

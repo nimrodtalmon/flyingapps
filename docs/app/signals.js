@@ -15,9 +15,11 @@ export const TUNABLES = {
   engaged_threshold: 0.5,
 };
 
-const SEEN_KEY    = "fa.seen.v1";
-const JAR_KEY     = "fa.jar.v1";
-const TRACES_KEY  = "fa.traces.v1";
+const SEEN_KEY      = "fa.seen.v1";
+const JAR_KEY       = "fa.jar.v1";
+const TRACES_KEY    = "fa.traces.v1";
+const FLY_STATS_KEY = "fa.fly_stats.v1";
+const LAST_VAR_KEY  = "fa.last_variant.v1";
 
 const clip = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
@@ -86,4 +88,30 @@ export function saveTrace(trace) {
 }
 export function countTraces() {
   return loadJSON(TRACES_KEY, []).length;
+}
+
+// Per-fly stats — lets the recommender pick the best-performing variant of a
+// concept. Beta(1,1) prior is added when reading.
+export function getFlyStats() { return loadJSON(FLY_STATS_KEY, {}); }
+export function updateFlyStats(flyId, engaged) {
+  const stats = getFlyStats();
+  if (!stats[flyId]) stats[flyId] = { wins: 0, losses: 0 };
+  if (engaged) stats[flyId].wins += 1;
+  else         stats[flyId].losses += 1;
+  saveJSON(FLY_STATS_KEY, stats);
+}
+export function flyPosteriorMean(flyId) {
+  const s = getFlyStats()[flyId] || { wins: 0, losses: 0 };
+  return (s.wins + 1) / (s.wins + s.losses + 2);
+}
+
+// User's last-chosen variant per concept (sticky preference).
+export function getLastVariant(conceptId) {
+  const m = loadJSON(LAST_VAR_KEY, {});
+  return m[conceptId] || null;
+}
+export function setLastVariant(conceptId, flyId) {
+  const m = loadJSON(LAST_VAR_KEY, {});
+  m[conceptId] = flyId;
+  saveJSON(LAST_VAR_KEY, m);
 }

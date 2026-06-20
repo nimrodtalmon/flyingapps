@@ -96,12 +96,99 @@ html, body {
   opacity: 0.55;
 }
 
-/* The catch affordance — small jar/net glyph, lower-right of each Fly. */
-.slot .catch {
+/* Variant-swap pulse: a quick veil over the frame while the iframe swaps. */
+.slot.is-variant-swap .frame::after {
+  content: "";
   position: absolute;
-  bottom: 28px;
-  right: 28px;
+  inset: 0;
+  background: var(--surface);
+  opacity: 1;
+  animation: variant-veil 320ms var(--ease-out) forwards;
+  pointer-events: none;
   z-index: 2;
+}
+@keyframes variant-veil {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Bottom chrome strip — variant nav + catch. Mostly transparent;
+   only the controls themselves accept pointer events. */
+.slot .chrome {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  height: 56px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 360ms var(--ease-out), transform 360ms var(--ease-out);
+}
+.slot.is-active .chrome { opacity: 1; transform: translateY(0); }
+
+.slot .chev,
+.slot .catch,
+.slot .dots {
+  pointer-events: auto;
+}
+
+/* Chevrons — only shown when the concept has >1 variant. */
+.slot .chev {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(26,35,48,0.06);
+  color: var(--muted);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: color 160ms ease, background 160ms ease, transform 160ms var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.slot.has-variants .chev { display: inline-flex; }
+.slot .chev:hover { color: var(--ink); background: #fff; }
+.slot .chev:active { transform: scale(0.94); }
+
+/* Dot indicator — one dot per variant. */
+.slot .dots {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(26,35,48,0.04);
+  backdrop-filter: blur(6px);
+}
+.slot.has-variants .dots { display: inline-flex; }
+.slot .dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(26,35,48,0.18);
+  cursor: pointer;
+  transition: background 200ms ease, transform 200ms var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.slot .dot.is-active { background: var(--accent); transform: scale(1.18); }
+.slot .dot:hover { background: rgba(26,35,48,0.3); }
+.slot .dot.is-active:hover { background: var(--accent); }
+
+/* The catch affordance — sits at the right edge of the chrome row.
+   Stretches off to the right via margin-left:auto so the dots stay centered. */
+.slot .catch {
+  margin-left: auto;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -111,21 +198,27 @@ html, body {
   display: grid;
   place-items: center;
   cursor: pointer;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 360ms var(--ease-out), transform 360ms var(--ease-out), background 200ms ease;
+  transition: background 200ms ease, transform 160ms var(--ease-out);
   backdrop-filter: blur(6px);
   -webkit-tap-highlight-color: transparent;
 }
-.slot.is-active .catch { opacity: 1; transform: translateY(0); }
 .slot .catch:hover { background: #fff; }
+.slot .catch:active { transform: scale(0.94); }
 .slot .catch.is-caught {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
 }
 
-/* "caught" puff animation */
+/* When the concept has variants, give the dots/chev cluster room: the catch
+   slides slightly to the right and the cluster centers. */
+.slot.has-variants .chrome { justify-content: space-between; }
+.slot.has-variants .chrome::before {
+  content: "";
+  width: 44px;  /* mirror the catch so dots stay visually centered */
+}
+
+/* "caught" puff animation — anchored to where the catch glyph lives. */
 @keyframes puff {
   0%   { transform: scale(0.6); opacity: 0; }
   40%  { transform: scale(1.15); opacity: 1; }
@@ -133,15 +226,15 @@ html, body {
 }
 .puff {
   position: absolute;
-  bottom: 28px;
-  right: 28px;
+  bottom: 22px;
+  right: 16px;
   width: 44px;
   height: 44px;
   border-radius: 50%;
   background: rgba(43,182,163,0.35);
   pointer-events: none;
   animation: puff 700ms var(--ease-out) forwards;
-  z-index: 3;
+  z-index: 4;
 }
 
 /* The global jar button (top-right of feed) */
@@ -206,8 +299,15 @@ html, body {
   0%, 100% { opacity: 0.55; transform: translate(-50%, 0); }
   50%      { opacity: 1;    transform: translate(-50%, -6px); }
 }
+.hint.is-out {
+  animation: none;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition: opacity 320ms ease, transform 320ms var(--ease-out);
+}
 
-/* The jar (caught Flies) */
+/* The jar (caught Flies) — open/close transitions controlled via classes
+   rather than one-shot animation so closing can be smooth too. */
 .jar {
   position: fixed;
   inset: 0;
@@ -215,12 +315,12 @@ html, body {
   background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  animation: jar-in 320ms var(--ease-out) both;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 320ms var(--ease-out), transform 320ms var(--ease-out);
 }
-@keyframes jar-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+.jar.is-open    { opacity: 1; transform: translateY(0); }
+.jar.is-closing { opacity: 0; transform: translateY(8px); }
 .jar-header {
   position: sticky;
   top: 0;
@@ -273,9 +373,16 @@ html, body {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  transition: transform 200ms var(--ease-out);
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
 }
-.jar-tile:hover { transform: translateY(-2px); }
+.jar-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 1px 2px rgba(26,35,48,0.04), 0 14px 30px rgba(26,35,48,0.10);
+}
+.jar-tile:active { transform: scale(0.985); }
 .jar-tile iframe {
   position: absolute;
   inset: 0;
@@ -292,7 +399,7 @@ html, body {
   letter-spacing: 0.12em;
   text-transform: lowercase;
   color: var(--ink);
-  background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.85) 70%);
+  background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.92) 70%);
 }
 
 .jar-empty {
@@ -303,31 +410,60 @@ html, body {
   letter-spacing: 0.04em;
 }
 
-/* Quiet "release" overlay when a jar Fly is opened back into full view */
+/* "Release" overlay — opens a caught Fly back into full view.
+   Scales up from the tile's bounding rect via transformOrigin (set in JS),
+   so the tile feels like it expands into the screen rather than appearing. */
 .release {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: var(--bg-bottom);
-  animation: jar-in 320ms var(--ease-out) both;
+  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
   display: flex;
   flex-direction: column;
+  opacity: 0;
+  transform: scale(0.86);
+  transition: opacity 320ms var(--ease-out), transform 360ms var(--ease-out);
+  will-change: transform, opacity;
 }
+.release.is-open    { opacity: 1; transform: scale(1); }
+.release.is-closing { opacity: 0; transform: scale(0.92); }
+
 .release header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 18px;
+  gap: 12px;
+  padding: 18px 16px 10px;
 }
-.release .release-back {
+.release .release-back,
+.release .release-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: none;
-  border: none;
+  border: 0;
   font: inherit;
   font-size: 13px;
   letter-spacing: 0.12em;
   text-transform: lowercase;
   color: var(--muted);
   cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 999px;
+  transition: color 160ms ease, background 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.release .release-back  { justify-self: start; }
+.release .release-remove { justify-self: end; color: #B86355; }
+.release .release-back:hover   { color: var(--ink);   background: rgba(255,255,255,0.6); }
+.release .release-remove:hover { color: #9F4438;     background: rgba(225,91,69,0.06); }
+.release .release-title {
+  justify-self: center;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  color: var(--ink);
+  opacity: 0.7;
 }
 .release iframe {
   flex: 1;

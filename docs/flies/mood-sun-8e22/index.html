@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="fly:tags" content="ambient,visual,color">
+<title>Mood Sun</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,system-ui,sans-serif;color:#1A2330;-webkit-tap-highlight-color:transparent;transition:background 1.6s cubic-bezier(.45,0,.55,1)}
+  .wrap{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px}
+  .sun{position:relative;width:64vmin;height:64vmin;max-width:300px;max-height:300px;cursor:pointer}
+  .core{position:absolute;inset:30%;border-radius:50%;box-shadow:0 30px 60px -20px rgba(0,0,0,.25),inset 0 0 0 1px rgba(255,255,255,.55);transition:background 1.6s cubic-bezier(.45,0,.55,1);will-change:transform}
+  .ray{position:absolute;top:50%;left:50%;width:5px;height:42%;margin-left:-2.5px;margin-top:-21%;transform-origin:50% 100%;border-radius:3px;transition:background 1.6s cubic-bezier(.45,0,.55,1),opacity 1.6s cubic-bezier(.45,0,.55,1),height 1.6s cubic-bezier(.45,0,.55,1)}
+  .sun:active .core{transform:scale(.97)}
+  .label{font-size:13px;letter-spacing:.22em;text-transform:lowercase;color:rgba(0,0,0,.55)}
+  .hex{font-variant-numeric:tabular-nums;font-size:14px;letter-spacing:.18em;color:rgba(0,0,0,.4)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="label" class="label">drift</div>
+  <div id="sun" class="sun">
+    <div id="core" class="core"></div>
+  </div>
+  <div id="hex" class="hex">·</div>
+</div>
+<script>
+(function(){if(window.Fly)return;function s(t,p){try{parent.postMessage({source:"fly",type:t,payload:p||null},"*")}catch(e){}}window.Fly={ready:()=>s("fly:ready"),interaction:k=>s("fly:interaction",{kind:k||null}),complete:()=>s("fly:complete"),catch:()=>s("fly:catch")};window.addEventListener("message",e=>{const d=e.data;if(!d||typeof d!=="object")return;if(d.type==="fly:active")window.dispatchEvent(new CustomEvent("fly:active"));if(d.type==="fly:pause")window.dispatchEvent(new CustomEvent("fly:pause"))});function r(){Fly.ready()}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",r,{once:true});else r();})();
+</script>
+<script>
+  const palettes = [
+    { name:"drift",   a:"#EAF1F6", b:"#F7FAFC", core:["#9CD5CC","#2BB6A3"] },
+    { name:"dusk",    a:"#FFEFE5", b:"#FFD9C7", core:["#FF9F84","#E15B45"] },
+    { name:"deep",    a:"#1E2A3A", b:"#0F1825", core:["#5DA9E9","#2D7DD2"] },
+    { name:"meadow",  a:"#E8F4DE", b:"#D8EBC8", core:["#A8D88A","#5BAE4E"] },
+    { name:"plum",    a:"#1F1530", b:"#2E1F47", core:["#C892D8","#7B3FA0"] },
+    { name:"honey",   a:"#FFF4D6", b:"#FFE5A0", core:["#FFC34A","#E0902B"] },
+    { name:"haze",    a:"#F1ECF8", b:"#E0D8F0", core:["#B0A0E0","#705ABB"] },
+    { name:"sea",     a:"#E2F2F2", b:"#CFE7E7", core:["#7FCBCB","#2E8C8C"] },
+  ];
+
+  const sun = document.getElementById("sun");
+  const N_RAYS = 18;
+  for (let i = 0; i < N_RAYS; i++) {
+    const r = document.createElement("div");
+    r.className = "ray";
+    r.style.transform = `rotate(${i * 360/N_RAYS}deg)`;
+    sun.appendChild(r);
+  }
+  const rays = sun.querySelectorAll(".ray");
+
+  let idx = 0;
+  function apply(i){
+    const p = palettes[i % palettes.length];
+    document.body.style.background = `linear-gradient(180deg,${p.a} 0%,${p.b} 100%)`;
+    document.getElementById("core").style.background = `radial-gradient(circle at 35% 30%,${p.core[0]},${p.core[1]} 70%)`;
+    rays.forEach((r, j) => {
+      r.style.background = j % 2 === 0 ? p.core[1] : p.core[0];
+      r.style.opacity = 0.35 + (j % 3) * 0.18;
+      r.style.height = (32 + ((j*7) % 14)) + "%";
+    });
+    document.getElementById("label").textContent = p.name;
+    document.getElementById("hex").textContent = p.core[1];
+  }
+  apply(0);
+  sun.addEventListener("click", () => {
+    idx = (idx + 1) % palettes.length;
+    apply(idx);
+    Fly.interaction("cycle");
+  });
+</script>
+</body>
+</html>
