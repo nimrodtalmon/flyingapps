@@ -47,6 +47,13 @@ async function main() {
   catalog = expandManifest(manifest.flies);
   recommender = new Recommender(catalog);
 
+  // Direct link: ?fly=<id> renders just that one Fly, with back/share/catch.
+  const directId = new URLSearchParams(location.search).get("fly");
+  if (directId) {
+    renderDirectFly(directId);
+    return;
+  }
+
   for (let i = 0; i <= BUFFER_LOOK_AHEAD; i++) {
     const pick = recommender.pick(sessionSeen, getSeen(), countTraces());
     if (!pick) break;
@@ -61,6 +68,89 @@ async function main() {
   maybeShowHint();
 
   requestAnimationFrame(() => setActive(0));
+}
+
+// ---- direct-link view ----------------------------------------------------
+
+function renderDirectFly(id) {
+  const fly = catalog.find(f => f.id === id);
+  if (!fly) {
+    feedEl.innerHTML = `<div class="slot"><div class="frame" style="display:grid;place-items:center;color:#8B97A6;letter-spacing:.1em;text-transform:lowercase;text-align:center;padding:24px;">fly not found<br><a href="${location.pathname}" style="color:#2BB6A3;margin-top:18px;display:inline-block;">back to the swarm</a></div></div>`;
+    return;
+  }
+  const wrap = document.createElement("div");
+  wrap.className = "release is-open is-shared";
+  const caught = getJar().includes(fly.id);
+  wrap.innerHTML = `
+    <header>
+      <a class="release-back" href="${location.pathname}">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        the swarm
+      </a>
+      <span class="release-title">${escapeHtml(fly.title || "fly")}</span>
+      <div class="release-actions">
+        <button class="release-share" type="button">share</button>
+        <button class="release-catch${caught ? " is-caught" : ""}" type="button">${caught ? "caught" : "catch"}</button>
+      </div>
+    </header>
+  `;
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("sandbox", "allow-scripts");
+  mountFly(iframe, fly);
+  wrap.appendChild(iframe);
+  document.body.appendChild(wrap);
+
+  wrap.querySelector(".release-share").addEventListener("click", () => shareFly(fly));
+  wrap.querySelector(".release-catch").addEventListener("click", (e) => {
+    addToJar(fly.id);
+    e.currentTarget.textContent = "caught";
+    e.currentTarget.classList.add("is-caught");
+    updateJarBadge();
+    showToast("added to your jar");
+  });
+  // Show the jar button so the recipient can find their jar too.
+  document.getElementById("jar-button").hidden = false;
+  setupJar();
+}
+
+// ---- share ---------------------------------------------------------------
+
+function shareUrlFor(fly) {
+  return `${location.origin}${location.pathname}?fly=${encodeURIComponent(fly.id)}`;
+}
+
+async function shareFly(fly) {
+  const url = shareUrlFor(fly);
+  const title = fly.title || "Fly";
+  try {
+    if (navigator.share) {
+      await navigator.share({ title, text: `A Fly: ${title}`, url });
+      return;
+    }
+  } catch (e) { /* user cancelled */ }
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast("link copied");
+  } catch (e) {
+    // Last resort: show URL in a prompt so it can be copied manually.
+    prompt("share this link", url);
+  }
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  if (!t) return;
+  t.textContent = msg;
+  t.hidden = false;
+  t.classList.remove("is-out");
+  requestAnimationFrame(() => t.classList.add("is-in"));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    t.classList.remove("is-in");
+    t.classList.add("is-out");
+    setTimeout(() => { t.hidden = true; t.classList.remove("is-out"); }, 280);
+  }, 1600);
 }
 
 function showEmpty(msg) {
@@ -151,16 +241,28 @@ function appendSlot(pick) {
   nextEl.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   nextEl.addEventListener("click", (e) => { e.stopPropagation(); switchVariant(idx, +1); });
 
+  const actionsEl = document.createElement("div");
+  actionsEl.className = "actions";
+
+  const shareBtn = document.createElement("button");
+  shareBtn.className = "share";
+  shareBtn.setAttribute("aria-label", "share this fly");
+  shareBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 4v12m0-12l-4 4m4-4l4 4M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  shareBtn.addEventListener("click", (e) => { e.stopPropagation(); shareFly(slots[idx].fly); });
+
   const catchBtn = document.createElement("button");
   catchBtn.className = "catch";
   catchBtn.setAttribute("aria-label", "catch this fly");
   catchBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18"><path d="M7 4h10v2H7zM6 7h12v2.5a4 4 0 0 1-1 2.5V19a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-7a4 4 0 0 1-1-2.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
   catchBtn.addEventListener("click", (e) => { e.stopPropagation(); onCatch(idx); });
 
+  actionsEl.appendChild(shareBtn);
+  actionsEl.appendChild(catchBtn);
+
   chromeEl.appendChild(prevEl);
   chromeEl.appendChild(dotsEl);
   chromeEl.appendChild(nextEl);
-  chromeEl.appendChild(catchBtn);
+  chromeEl.appendChild(actionsEl);
 
   // Double-tap on the slot background = quick catch.
   let lastTap = 0;
@@ -500,7 +602,10 @@ function openRelease(fly, sourceTile) {
         ${STRINGS.releaseBack}
       </button>
       <span class="release-title">${escapeHtml(fly.title || "fly")}</span>
-      <button class="release-remove" type="button">release</button>
+      <div class="release-actions">
+        <button class="release-share" type="button">share</button>
+        <button class="release-remove" type="button">release</button>
+      </div>
     </header>
   `;
   const iframe = document.createElement("iframe");
@@ -525,6 +630,7 @@ function openRelease(fly, sourceTile) {
     setTimeout(() => wrap.remove(), 320);
   }
   wrap.querySelector(".release-back").addEventListener("click", close);
+  wrap.querySelector(".release-share").addEventListener("click", () => shareFly(fly));
   wrap.querySelector(".release-remove").addEventListener("click", () => {
     removeFromJar(fly.id);
     updateJarBadge();

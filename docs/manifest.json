@@ -182,10 +182,19 @@
       "prior": 1.0,
       "aspect": "portrait"
     },
-    { "kind": "template", "template": "breath",    "concept": "breath-pacer", "prior": 1.0 },
-    { "kind": "template", "template": "mood",      "concept": "mood-ring",    "prior": 1.0 },
-    { "kind": "template", "template": "pebble",    "concept": "pebbles",      "prior": 1.0 },
-    { "kind": "template", "template": "palette",   "concept": "color-sample", "prior": 1.0 },
-    { "kind": "template", "template": "lissajous", "concept": "lissajous",    "prior": 1.0 }
+    { "kind": "template", "template": "breath",    "concept": "breath-pacer",  "prior": 1.0 },
+    { "kind": "template", "template": "mood",      "concept": "mood-ring",     "prior": 1.0 },
+    { "kind": "template", "template": "pebble",    "concept": "pebbles",       "prior": 1.0 },
+    { "kind": "template", "template": "palette",   "concept": "color-sample",  "prior": 1.0 },
+    { "kind": "template", "template": "lissajous", "concept": "lissajous",     "prior": 1.0 },
+    { "kind": "template", "template": "starfield", "concept": "starfield",     "prior": 1.0 },
+    { "kind": "template", "template": "coin",      "concept": "coin-flip",     "prior": 1.0 },
+    { "kind": "template", "template": "rollDie",   "concept": "roll-die",      "prior": 1.0 },
+    { "kind": "template", "template": "reaction",  "concept": "reaction-timer","prior": 1.0 },
+    { "kind": "template", "template": "doodle",    "concept": "pixel-doodle",  "prior": 1.0 },
+    { "kind": "template", "template": "daisy",     "concept": "word-daisy",    "prior": 1.0 },
+    { "kind": "template", "template": "clock",     "concept": "tide-clock",    "prior": 1.0 },
+    { "kind": "template", "template": "tally",     "concept": "tally-counter", "prior": 1.0 },
+    { "kind": "template", "template": "tipCalc",   "concept": "tip-calc",      "prior": 1.0 }
   ]
 }

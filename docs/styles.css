@@ -112,8 +112,8 @@ html, body {
   100% { opacity: 0; }
 }
 
-/* Bottom chrome strip — variant nav + catch. Mostly transparent;
-   only the controls themselves accept pointer events. */
+/* Bottom chrome strip — variant nav (centered) + share/catch (right).
+   The strip itself is transparent; only the controls accept pointer events. */
 .slot .chrome {
   position: absolute;
   left: 16px;
@@ -134,8 +134,20 @@ html, body {
 
 .slot .chev,
 .slot .catch,
-.slot .dots {
+.slot .share,
+.slot .dots,
+.slot .actions {
   pointer-events: auto;
+}
+
+.slot .actions {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* Chevrons — only shown when the concept has >1 variant. */
@@ -185,10 +197,26 @@ html, body {
 .slot .dot:hover { background: rgba(26,35,48,0.3); }
 .slot .dot.is-active:hover { background: var(--accent); }
 
-/* The catch affordance — sits at the right edge of the chrome row.
-   Stretches off to the right via margin-left:auto so the dots stay centered. */
+/* Share affordance — a small icon button paired with catch on the right. */
+.slot .share {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(26,35,48,0.08);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 160ms ease, background 200ms ease, transform 160ms var(--ease-out);
+  backdrop-filter: blur(6px);
+  -webkit-tap-highlight-color: transparent;
+}
+.slot .share:hover { color: var(--ink); background: #fff; }
+.slot .share:active { transform: scale(0.94); }
+
+/* The catch affordance — at the far right of the chrome row. */
 .slot .catch {
-  margin-left: auto;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -208,14 +236,6 @@ html, body {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
-}
-
-/* When the concept has variants, give the dots/chev cluster room: the catch
-   slides slightly to the right and the cluster centers. */
-.slot.has-variants .chrome { justify-content: space-between; }
-.slot.has-variants .chrome::before {
-  content: "";
-  width: 44px;  /* mirror the catch so dots stay visually centered */
 }
 
 /* "caught" puff animation — anchored to where the catch glyph lives. */
@@ -429,12 +449,21 @@ html, body {
 .release.is-closing { opacity: 0; transform: scale(0.92); }
 
 .release header {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 18px 16px 10px;
 }
+.release .release-back  { flex: 0 0 auto; white-space: nowrap; }
+.release .release-title {
+  flex: 1 1 0;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.release .release-actions { flex: 0 0 auto; }
 .release .release-back,
 .release .release-remove {
   display: inline-flex;
@@ -453,10 +482,20 @@ html, body {
   transition: color 160ms ease, background 160ms ease;
   -webkit-tap-highlight-color: transparent;
 }
-.release .release-back  { justify-self: start; }
-.release .release-remove { justify-self: end; color: #B86355; }
+.release .release-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .release .release-back:hover   { color: var(--ink);   background: rgba(255,255,255,0.6); }
+.release .release-remove        { color: #B86355; }
 .release .release-remove:hover { color: #9F4438;     background: rgba(225,91,69,0.06); }
+.release .release-share        { color: var(--accent); }
+.release .release-share:hover { color: #1F8E80;      background: rgba(43,182,163,0.08); }
+.release .release-catch        { color: var(--accent); }
+.release .release-catch:hover { color: #1F8E80;      background: rgba(43,182,163,0.08); }
+.release .release-catch.is-caught { color: #1F8E80; }
+.release.is-shared { transform: none; opacity: 1; }
 .release .release-title {
   justify-self: center;
   font-size: 13px;
@@ -473,3 +512,25 @@ html, body {
   background: var(--surface);
   box-shadow: var(--shadow);
 }
+
+/* Brief toast — confirmation pill at the bottom. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 36px;
+  transform: translate(-50%, 8px);
+  z-index: 100;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(26,35,48,0.92);
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease, transform 280ms var(--ease-out);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+.toast.is-in  { opacity: 1; transform: translate(-50%, 0); }
+.toast.is-out { opacity: 0; transform: translate(-50%, 8px); }
