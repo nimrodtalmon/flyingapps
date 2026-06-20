@@ -18,6 +18,58 @@
     <span class="jar-count" id="jar-count" hidden></span>
   </button>
 
+  <button id="hatch-button" class="hatch-button" aria-label="Hatch a new Fly" hidden>
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </button>
+
+  <div id="hatch-modal" class="hatch-modal" hidden role="dialog" aria-label="Hatch a new Fly">
+    <div class="hatch-backdrop" id="hatch-backdrop"></div>
+    <div class="hatch-card">
+      <header>
+        <h2>hatch a new fly</h2>
+        <button class="hatch-close" id="hatch-close" aria-label="Close">close</button>
+      </header>
+      <div class="hatch-body">
+        <div class="hatch-step" id="hatch-step-pat" hidden>
+          <p class="hatch-lead">to hatch from the site, paste a GitHub <strong>fine-grained PAT</strong> scoped to this repo's <em>Contents (read &amp; write)</em>.</p>
+          <p class="hatch-note">the token lives only in this browser. it's sent to GitHub's API and nowhere else.</p>
+          <a class="hatch-link" id="hatch-create-pat" target="_blank" rel="noopener">create a token →</a>
+          <label class="hatch-field">
+            <span>token</span>
+            <input type="password" id="hatch-pat-input" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+          </label>
+          <button class="hatch-action" id="hatch-save-pat" type="button">save token</button>
+        </div>
+        <div class="hatch-step" id="hatch-step-form" hidden>
+          <label class="hatch-field">
+            <span>idea (optional)</span>
+            <input type="text" id="hatch-idea" placeholder="surprise me" autocomplete="off">
+          </label>
+          <label class="hatch-field">
+            <span>how many</span>
+            <input type="number" id="hatch-count" value="1" min="1" max="5">
+          </label>
+          <button class="hatch-action" id="hatch-go" type="button">hatch</button>
+          <button class="hatch-link" id="hatch-forget" type="button">forget my token</button>
+        </div>
+        <div class="hatch-step" id="hatch-step-pending" hidden>
+          <p class="hatch-lead">hatching — typically 30 to 60 seconds.</p>
+          <p class="hatch-note" id="hatch-pending-meta">workflow dispatched</p>
+        </div>
+        <div class="hatch-step" id="hatch-step-error" hidden>
+          <p class="hatch-error" id="hatch-error-msg"></p>
+          <button class="hatch-action" id="hatch-retry" type="button">try again</button>
+        </div>
+        <div class="hatch-step" id="hatch-step-no-repo" hidden>
+          <p class="hatch-lead">can't auto-detect the repo from this URL.</p>
+          <p class="hatch-note">on GitHub Pages this works automatically. for local dev or custom domains, add a <code>"repo": "owner/name"</code> field to <code>docs/manifest.json</code>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="hint" class="hint" hidden>
     <span class="hint-arrow" aria-hidden="true">↑</span>
     <span class="hint-text">swipe up — let the next one in</span>

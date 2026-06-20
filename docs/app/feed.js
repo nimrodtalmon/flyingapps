@@ -3,6 +3,7 @@
 import { STRINGS } from "./strings.js";
 import { Recommender, conceptOf } from "./recommender.js";
 import { TEMPLATES } from "./templates.js";
+import { detectRepo, getPat, setPat, clearPat, dispatchHatch, pollForNewFly } from "./hatch.js";
 import {
   computeReward, isEngaged,
   getSeen, markSeen,
@@ -65,6 +66,7 @@ async function main() {
   window.addEventListener("message", onFlyMessage);
   window.addEventListener("keydown", onKeydown);
   setupJar();
+  setupHatch();
   maybeShowHint();
 
   requestAnimationFrame(() => setActive(0));
@@ -648,6 +650,144 @@ function updateJarBadge() {
   const badge = document.getElementById("jar-count");
   if (count > 0) { badge.hidden = false; badge.textContent = String(count); }
   else            { badge.hidden = true;  badge.textContent = ""; }
+}
+
+// ---- hatch (from inside the feed) ---------------------------------------
+
+function setupHatch() {
+  const btn      = document.getElementById("hatch-button");
+  const modal    = document.getElementById("hatch-modal");
+  const backdrop = document.getElementById("hatch-backdrop");
+  const close    = document.getElementById("hatch-close");
+  if (!btn || !modal) return;
+
+  btn.hidden = false;
+  btn.addEventListener("click", () => openHatchModal());
+  close.addEventListener("click", () => closeHatchModal());
+  backdrop.addEventListener("click", () => closeHatchModal());
+
+  // Step actions
+  document.getElementById("hatch-save-pat").addEventListener("click", () => {
+    const v = document.getElementById("hatch-pat-input").value.trim();
+    if (!v) return;
+    setPat(v);
+    showHatchStep("form");
+  });
+  document.getElementById("hatch-forget").addEventListener("click", () => {
+    clearPat();
+    document.getElementById("hatch-pat-input").value = "";
+    showHatchStep("pat");
+  });
+  document.getElementById("hatch-go").addEventListener("click", () => fireHatch());
+  document.getElementById("hatch-retry").addEventListener("click", () => {
+    const repo = detectRepo(manifest);
+    showHatchStep(repo ? (getPat() ? "form" : "pat") : "no-repo");
+  });
+
+  const createLink = document.getElementById("hatch-create-pat");
+  if (createLink) {
+    // Best we can do — GitHub doesn't accept prefilled fine-grained scopes via URL.
+    createLink.href = "https://github.com/settings/personal-access-tokens/new";
+  }
+}
+
+function openHatchModal() {
+  const modal = document.getElementById("hatch-modal");
+  const repo = detectRepo(manifest);
+  if (!repo) {
+    showHatchStep("no-repo");
+  } else if (!getPat()) {
+    showHatchStep("pat");
+  } else {
+    showHatchStep("form");
+  }
+  modal.hidden = false;
+  requestAnimationFrame(() => modal.classList.add("is-open"));
+}
+
+function closeHatchModal() {
+  const modal = document.getElementById("hatch-modal");
+  modal.classList.remove("is-open");
+  modal.classList.add("is-closing");
+  setTimeout(() => { modal.hidden = true; modal.classList.remove("is-closing"); }, 280);
+}
+
+function showHatchStep(name) {
+  for (const id of ["pat", "form", "pending", "error", "no-repo"]) {
+    const el = document.getElementById("hatch-step-" + id);
+    if (el) el.hidden = (id !== name);
+  }
+}
+
+function showHatchError(msg) {
+  document.getElementById("hatch-error-msg").textContent = msg;
+  showHatchStep("error");
+}
+
+async function fireHatch() {
+  const repo = detectRepo(manifest);
+  const pat  = getPat();
+  if (!repo) { showHatchStep("no-repo"); return; }
+  if (!pat)  { showHatchStep("pat"); return; }
+
+  const idea  = document.getElementById("hatch-idea").value.trim();
+  const count = parseInt(document.getElementById("hatch-count").value, 10) || 1;
+
+  showHatchStep("pending");
+  const metaEl = document.getElementById("hatch-pending-meta");
+  metaEl.textContent = "asking GitHub to run the workflow…";
+
+  // Snapshot the known static ids BEFORE dispatch so we can spot new ones.
+  const knownIds = new Set(
+    (manifest.flies || [])
+      .filter(f => f.id)
+      .map(f => f.id)
+  );
+
+  try {
+    await dispatchHatch(repo, pat, { idea, count });
+  } catch (e) {
+    showHatchError(String(e.message || e));
+    return;
+  }
+
+  metaEl.textContent = "workflow running — polling for the new Fly…";
+  closeHatchModal();
+  showToast("hatching… give it ~30s");
+
+  try {
+    const { fresh } = await pollForNewFly(knownIds, (elapsed) => {
+      // No status update — polling is silent.
+    });
+    if (fresh && fresh.length > 0) {
+      const fly = fresh[0];
+      showHatchedToast(fly);
+    }
+  } catch (e) {
+    showToast(String(e.message || e));
+  }
+}
+
+function showHatchedToast(fly) {
+  const t = document.getElementById("toast");
+  if (!t) return;
+  t.innerHTML = "";
+  const label = document.createElement("span");
+  label.textContent = "new fly hatched: " + (fly.title || fly.id);
+  const see = document.createElement("a");
+  see.textContent = "see it";
+  see.href = `${location.pathname}?fly=${encodeURIComponent(fly.id)}`;
+  see.style.cssText = "margin-left:10px;color:#9CD5CC;text-decoration:underline;pointer-events:auto;";
+  t.appendChild(label);
+  t.appendChild(see);
+  t.hidden = false;
+  t.classList.remove("is-out");
+  requestAnimationFrame(() => t.classList.add("is-in"));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    t.classList.remove("is-in"); t.classList.add("is-out");
+    setTimeout(() => { t.hidden = true; t.classList.remove("is-out"); t.textContent = ""; }, 280);
+  }, 8000);
 }
 
 function escapeHtml(s) {
