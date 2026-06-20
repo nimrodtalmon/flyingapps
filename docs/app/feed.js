@@ -2,6 +2,7 @@
 
 import { STRINGS } from "./strings.js";
 import { Recommender, conceptOf } from "./recommender.js";
+import { TEMPLATES } from "./templates.js";
 import {
   computeReward, isEngaged,
   getSeen, markSeen,
@@ -16,6 +17,7 @@ const LAZY_UNMOUNT_DISTANCE = 2;
 const HINT_KEY = "fa.hinted.v1";
 
 let manifest = null;
+let catalog = [];
 let recommender = null;
 let feedEl = null;
 
@@ -42,7 +44,8 @@ async function main() {
     return;
   }
 
-  recommender = new Recommender(manifest.flies);
+  catalog = expandManifest(manifest.flies);
+  recommender = new Recommender(catalog);
 
   for (let i = 0; i <= BUFFER_LOOK_AHEAD; i++) {
     const pick = recommender.pick(sessionSeen, getSeen(), countTraces());
@@ -62,6 +65,52 @@ async function main() {
 
 function showEmpty(msg) {
   feedEl.innerHTML = `<div class="slot"><div class="frame" style="display:grid;place-items:center;color:#8B97A6;letter-spacing:.1em;text-transform:lowercase;">${msg}</div></div>`;
+}
+
+// Expand manifest template entries into concrete virtual Flies, one per
+// variant the template offers. Each gets a stable id `${templateId}-v${i}`
+// so per-fly stats persist across reloads.
+function expandManifest(entries) {
+  const out = [];
+  for (const entry of entries) {
+    if (entry.kind === "template") {
+      const tpl = TEMPLATES[entry.template];
+      if (!tpl) { console.warn("unknown template:", entry.template); continue; }
+      const count = entry.variantCount ?? tpl.variantCount ?? 1;
+      for (let i = 0; i < count; i++) {
+        out.push({
+          id: `${entry.template}-v${i}`,
+          concept: entry.concept || tpl.concept,
+          title: tpl.variantTitle ? tpl.variantTitle(i) : `${tpl.concept} v${i+1}`,
+          tags: entry.tags || tpl.tags,
+          category: entry.category || tpl.category,
+          template: entry.template,
+          seedIdx: i,
+          kind: "template",
+          prior: entry.prior ?? 1.0,
+          aspect: "portrait",
+        });
+      }
+    } else {
+      out.push({ kind: "static", ...entry });
+    }
+  }
+  return out;
+}
+
+function mountFly(iframe, fly) {
+  if (fly.kind === "template") {
+    const tpl = TEMPLATES[fly.template];
+    iframe.removeAttribute("src");
+    iframe.srcdoc = tpl ? tpl.render(fly.seedIdx) : "";
+  } else {
+    iframe.removeAttribute("srcdoc");
+    iframe.src = fly.path;
+  }
+}
+function unmountIframe(iframe) {
+  iframe.removeAttribute("srcdoc");
+  iframe.src = "about:blank";
 }
 
 // ---- slot lifecycle ------------------------------------------------------
@@ -144,7 +193,7 @@ function appendSlot(pick) {
   slots.push(slot);
 
   renderSlotUI(slot);
-  iframe.src = slot.fly.path;
+  mountFly(iframe, slot.fly);
 
   requestAnimationFrame(() => slotEl.classList.add("is-mounted"));
 }
@@ -202,10 +251,10 @@ function switchVariant(slotIdx, delta) {
   slot.signals = freshSignals(slot.fly);
   setLastVariant(slot.concept, slot.fly.id);
 
-  // Subtle cross-fade: pulse the frame, swap the iframe src.
+  // Subtle cross-fade: pulse the frame, swap the iframe contents.
   slot.el.classList.add("is-variant-swap");
   postToIframe(slot.iframe, "fly:pause");
-  slot.iframe.src = slot.fly.path;
+  mountFly(slot.iframe, slot.fly);
   setTimeout(() => slot.el.classList.remove("is-variant-swap"), 320);
 
   renderSlotUI(slot);
@@ -303,13 +352,13 @@ function finalizeSlot(idx) {
 function unmountSlot(idx) {
   const s = slots[idx];
   if (!s || !s.mounted) return;
-  s.iframe.src = "about:blank";
+  unmountIframe(s.iframe);
   s.mounted = false;
 }
 function ensureMounted(idx) {
   const s = slots[idx];
   if (!s || s.mounted) return;
-  s.iframe.src = s.fly.path;
+  mountFly(s.iframe, s.fly);
   s.mounted = true;
 }
 
@@ -416,7 +465,7 @@ function renderJarGrid() {
     return;
   }
   empty.hidden = true;
-  const byId = Object.fromEntries(manifest.flies.map(f => [f.id, f]));
+  const byId = Object.fromEntries(catalog.map(f => [f.id, f]));
   // newest first
   for (const id of [...ids].reverse()) {
     const fly = byId[id];
@@ -428,7 +477,7 @@ function renderJarGrid() {
     const tIframe = document.createElement("iframe");
     tIframe.setAttribute("sandbox", "allow-scripts");
     tIframe.setAttribute("tabindex", "-1");
-    tIframe.src = fly.path;
+    mountFly(tIframe, fly);
     tile.appendChild(tIframe);
 
     const label = document.createElement("div");
@@ -456,7 +505,7 @@ function openRelease(fly, sourceTile) {
   `;
   const iframe = document.createElement("iframe");
   iframe.setAttribute("sandbox", "allow-scripts");
-  iframe.src = fly.path;
+  mountFly(iframe, fly);
   wrap.appendChild(iframe);
 
   // FLIP-style origin: scale up from the tile's bounding rect.

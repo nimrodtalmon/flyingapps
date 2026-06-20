@@ -181,6 +181,11 @@
       "created": "2026-06-17",
       "prior": 1.0,
       "aspect": "portrait"
-    }
+    },
+    { "kind": "template", "template": "breath",    "concept": "breath-pacer", "prior": 1.0 },
+    { "kind": "template", "template": "mood",      "concept": "mood-ring",    "prior": 1.0 },
+    { "kind": "template", "template": "pebble",    "concept": "pebbles",      "prior": 1.0 },
+    { "kind": "template", "template": "palette",   "concept": "color-sample", "prior": 1.0 },
+    { "kind": "template", "template": "lissajous", "concept": "lissajous",    "prior": 1.0 }
   ]
 }
