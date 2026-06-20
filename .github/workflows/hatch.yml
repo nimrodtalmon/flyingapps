@@ -1,0 +1,118 @@
+name: Hatch a Fly
+
+# Hatch new Flies on demand using your Claude Pro/Max subscription.
+#
+# Setup once:
+#   1) Run `claude setup-token` locally — you'll get a CLAUDE_CODE_OAUTH_TOKEN
+#   2) Add it as a repository secret named CLAUDE_CODE_OAUTH_TOKEN
+#      (Settings → Secrets and variables → Actions)
+#
+# Run it:
+#   Actions → "Hatch a Fly" → Run workflow
+#   (or trigger via the GitHub API with a fine-grained PAT — see README)
+#
+# Cost:
+#   Uses your subscription quota for inference, GitHub Actions minutes for
+#   compute. No Anthropic API charges, no key to manage.
+
+on:
+  workflow_dispatch:
+    inputs:
+      idea:
+        description: "What kind of Fly to hatch (a short phrase, or leave blank to surprise)"
+        required: false
+        default: ""
+      count:
+        description: "How many to hatch"
+        required: false
+        default: "1"
+      category:
+        description: "Pin to a category: tools, mindful, visuals, games, creative, word, or blank"
+        required: false
+        default: ""
+
+  # Also fire on a repository_dispatch event named "hatch", so the site (or any
+  # client with a fine-grained PAT) can request hatching by POSTing:
+  #   POST /repos/{owner}/{repo}/dispatches  { event_type: "hatch", client_payload: { ... } }
+  repository_dispatch:
+    types: [hatch]
+
+permissions:
+  contents: write
+
+jobs:
+  hatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Hatch with Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are hatching new Flies for this Flying Apps repo.
+
+            Inputs (any may be empty):
+              idea     = "${{ inputs.idea || github.event.client_payload.idea }}"
+              count    = "${{ inputs.count || github.event.client_payload.count || '1' }}"
+              category = "${{ inputs.category || github.event.client_payload.category }}"
+
+            Read README.md and the spec at the top of it. Then read at least
+            three existing Flies under docs/flies/ so you internalise the
+            style, palette, and SDK contract. Also read
+            docs/app/sdk/fly-sdk.js — that exact block (wrapped in <script>)
+            must be inlined verbatim near the bottom of every Fly.
+
+            For each new Fly (repeat `count` times):
+
+              1. Pick a small, tasteful interactive idea. Honour the `idea`
+                 input if given; otherwise surprise me — something that fits
+                 the airy, light, weightless vibe. Not a "full app". A toy,
+                 a tool, or a quiet visual.
+
+              2. Write ONE complete self-contained HTML file:
+                   - <!doctype html> ... </html>
+                   - Inline ALL CSS + JS — zero external network requests
+                   - Single portrait viewport (~390×800), responsive
+                   - <title> and <meta name="fly:tags" content="t1,t2,t3">
+                     with 2–4 lowercase tags
+                   - Calls window.Fly.interaction(kind) on user actions
+                   - Listens for window event "fly:pause" to stop timers,
+                     and "fly:active" to resume
+                   - Inlines the SDK block from docs/app/sdk/fly-sdk.js
+                     verbatim inside a <script> before </body>
+                   - Soft, airy palette consistent with the existing swarm,
+                     OR a deliberately distinct but on-brand alternative.
+
+              3. Save it at:
+                   docs/flies/<slug>-<4-char-hex-hash>/index.html
+                 where slug is the title lowercased + hyphenated.
+
+              4. Append a new entry to docs/manifest.json with the right
+                 fields: id, concept, title, tags, category, path,
+                 source: "hatched", created (today's date), prior: 1.0,
+                 aspect: "portrait".
+                 If your new Fly is a variant of an existing concept,
+                 use that concept id; otherwise the concept is a new slug
+                 derived from the title.
+
+              5. Validate visually by reading the file back — confirm doctype,
+                 title, fly:tags meta, and the SDK script are present, and
+                 that the file is under 500 KB.
+
+            After all new Flies are written, commit them in one commit:
+              git add docs/flies docs/manifest.json
+              git commit -m "Hatch <N> new Flies"
+              git push
+
+            Quality bar: each must feel like a Fly — light, airy, small,
+            tasteful, immediately enjoyable in a 2-second swipe past.
+          claude_args: |
+            --allowedTools Read,Write,Edit,Glob,Grep,Bash
+            --max-turns 40
