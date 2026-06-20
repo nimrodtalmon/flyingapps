@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# scripts/hatch — fire the GitHub Actions "Hatch a Fly" workflow on your
+# subscription (no API key needed). Triggers it via the gh CLI if you have it,
+# otherwise prints the manual URL.
+#
+# Usage:  ./scripts/hatch [-- args passed to workflow]
+#   ./scripts/hatch
+#   ./scripts/hatch idea="a soft tide gauge"
+#   ./scripts/hatch idea="quick breath toy" count=2
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+REPO_SLUG="$(git remote get-url origin 2>/dev/null \
+  | sed -E 's#(git@github\.com:|https://github\.com/)##; s#\.git$##')"
+
+if [ -z "${REPO_SLUG}" ]; then
+  echo "Could not determine the GitHub repository from 'origin'." >&2
+  echo "Make sure 'git remote get-url origin' returns a github.com URL." >&2
+  exit 1
+fi
+
+WORKFLOW_URL="https://github.com/${REPO_SLUG}/actions/workflows/hatch.yml"
+
+if command -v gh >/dev/null 2>&1; then
+  echo "Dispatching workflow on ${REPO_SLUG}…"
+  if [ "$#" -eq 0 ]; then
+    gh workflow run hatch.yml --repo "${REPO_SLUG}"
+  else
+    args=()
+    for kv in "$@"; do
+      args+=(-f "$kv")
+    done
+    gh workflow run hatch.yml --repo "${REPO_SLUG}" "${args[@]}"
+  fi
+  echo "Done. Watch it run: ${WORKFLOW_URL}"
+else
+  cat <<EOF
+The 'gh' CLI is not installed.
+
+Open the workflow page and click "Run workflow":
+  ${WORKFLOW_URL}
+
+Or install gh: https://cli.github.com/
+EOF
+fi

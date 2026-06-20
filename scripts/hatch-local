@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# scripts/hatch-local — run the offline hatchery (uses ANTHROPIC_API_KEY).
+# Usage: ./scripts/hatch-local [--n N] [--category C]
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+  cat <<'EOF' >&2
+ANTHROPIC_API_KEY is not set.
+
+This script runs the offline Python hatchery, which calls the Anthropic
+API directly. If you don't have an API key, prefer one of:
+
+  • Ask me in the Claude Code session  — zero setup
+  • Actions → Hatch a Fly → Run workflow — uses your Pro/Max subscription
+
+Both are documented in README.md.
+
+If you do have a key:
+  export ANTHROPIC_API_KEY=sk-ant-...
+  ./scripts/hatch-local --n 5
+EOF
+  exit 2
+fi
+
+# Ensure deps are installed.
+if ! python3 -c "import anthropic, playwright" >/dev/null 2>&1; then
+  echo "Installing hatchery dependencies (one-time)…"
+  python3 -m pip install --user -r hatchery/requirements.txt
+  python3 -m playwright install chromium
+fi
+
+cd hatchery
+exec python3 hatch.py "$@"

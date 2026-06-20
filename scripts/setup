@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# scripts/setup — sanity-check the environment and print your next step.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+bold()  { printf "\033[1m%s\033[0m"  "$*"; }
+green() { printf "\033[32m%s\033[0m" "$*"; }
+red()   { printf "\033[31m%s\033[0m" "$*"; }
+dim()   { printf "\033[2m%s\033[0m" "$*"; }
+yel()   { printf "\033[33m%s\033[0m" "$*"; }
+
+have()  { command -v "$1" >/dev/null 2>&1; }
+
+mark_ok()   { printf "  $(green ✓) %s\n" "$*"; }
+mark_warn() { printf "  $(yel ◦) %s\n" "$*"; }
+mark_miss() { printf "  $(red ✗) %s\n" "$*"; }
+
+echo
+bold "Flying Apps — setup check"; echo
+echo "================================"
+
+# Core
+have git     && mark_ok  "git"          || mark_miss "git — install from https://git-scm.com"
+have python3 && mark_ok  "python3"      || mark_miss "python3 — install Python 3.9+"
+
+# Optional: claude CLI (only needed for the subscription-driven hatching workflow)
+if have claude; then
+  mark_ok  "claude CLI (used for the hatching workflow)"
+else
+  mark_warn "claude CLI not found  $(dim "(optional — install from https://claude.com/code if you want to hatch new Flies on your Pro/Max subscription)")"
+fi
+
+# Hatchery (API-key path) — only needed if you'll use hatchery/hatch.py
+if [ -f hatchery/requirements.txt ]; then
+  if have pip && have pip3; then
+    mark_ok  "pip / pip3 available"
+  else
+    mark_warn "pip not found  $(dim "(only needed for the hatchery API-key path)")"
+  fi
+fi
+
+echo
+echo "================================"
+bold "Next step:"; echo
+echo
+echo "  $(green ./scripts/dev)         — serve the site locally"
+echo "  $(green make hatch)            — hatch a Fly via your Claude subscription (uses GitHub Actions; see README)"
+echo "  $(green make hatch-local)      — hatch via the offline Python hatchery (needs ANTHROPIC_API_KEY)"
+echo
+dim "Setup details, deployment, and the hatching paths are all in README.md"
+echo
